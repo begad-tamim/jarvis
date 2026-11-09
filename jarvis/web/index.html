@@ -189,6 +189,7 @@
         <div class="c-title">
           <div class="reactor sm" id="cReactor" aria-hidden="true"><span></span><span></span><span></span></div>
           <div><h2 id="cTitle">Ask JARVIS</h2><p class="c-ctx" id="cCtx">Anything. Any project.</p></div>
+          <span class="say" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
         </div>
         <div class="c-tools">
           <button class="icon-btn" id="speakBtn" type="button" aria-pressed="false" title="Read answers aloud">Voice off</button>
@@ -212,6 +213,15 @@
     <a href="#ask" data-nav="ask" class="dock-ask"><span class="mic-core" aria-hidden="true"></span><span>Ask</span></a>
     <a href="#markets" data-nav="markets">Markets</a>
   </nav>
+
+  <div class="boot" id="boot" hidden aria-hidden="true">
+    <div class="boot-inner">
+      <div class="reactor xl"><span></span><span></span><span></span></div>
+      <div class="boot-name" translate="no">JARVIS</div>
+      <ol class="boot-lines" id="bootLines"></ol>
+      <div class="boot-foot"><span class="num" id="bootPct">0%</span><span class="boot-done" id="bootDone">ALL SYSTEMS ONLINE</span></div>
+    </div>
+  </div>
 
   <div class="gate" id="gate" hidden>
     <div class="gate-card">

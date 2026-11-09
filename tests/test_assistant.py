@@ -31,7 +31,9 @@ def jar(registry):
 
 def test_brief_is_local_and_free(jar):
     m = jar.ask("brief me")
-    assert "need attention" in m.text and not jar.brain.calls and m.action["view"] == "home"
+    assert "2 projects need you: orbit-api (8 uncommitted changes) and atlas-ml" in m.text and not jar.brain.calls
+    card = m.action["brief"]
+    assert card["attention"] == 2 and card["rows"][0]["state"] == "attention" and card["projects"] == 7
 
 
 def test_open_project_switches_context(jar):

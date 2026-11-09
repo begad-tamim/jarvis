@@ -34,15 +34,16 @@ const STATE = {
   ready: ["Ready", "ready"], quiet: ["Quiet", "quiet"], unknown: ["Unknown", "quiet"],
 };
 
-async function loadHub() {
+async function loadHub(soft) {
   const r = await api("/api/hub");
   if (r.status === 401) { $("gate").hidden = false; return; }
+  const first = !H.hub;
   H.hub = await r.json();
-  H.messages = H.hub.messages || [];
   H.busy = H.hub.busy;
   renderChrome();
-  renderHome();
-  renderMessages(true);
+  renderHome(first);
+  if (!soft) { H.messages = H.hub.messages || []; renderMessages(); }
+  if (first) boot();
   if (H.hub.active && !H.project) loadProject(H.hub.active, false);
   route();
 }
@@ -85,7 +86,7 @@ function onEvent(ev, d) {
   if (ev === "snapshot") return window.Markets?.update(d);
   if (ev === "thought") return window.Markets?.thought(d);
   if (ev === "message") {
-    if (!H.messages.some((m) => m.id === d.id)) { H.messages.push(d); renderMessages(); }
+    if (!H.messages.some((m) => m.id === d.id)) { H.messages.push(d); appendMessage(d, true); }
     if (d.role === "jarvis") onReply(d);
     return;
   }
@@ -136,7 +137,7 @@ function greeting() {
 }
 
 // ------------------------------------------------------------------ home
-function renderHome() {
+function renderHome(first) {
   const h = H.hub, b = h.briefing;
   $("today").textContent = new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
   $("hello").textContent = greeting();
@@ -149,7 +150,8 @@ function renderHome() {
     ["Open tasks", b.tasks_open, ""],
   ];
   if (b.markets) tiles.push(["Portfolio today", (b.markets.day_pnl >= 0 ? "+" : "-") + usd(Math.abs(b.markets.day_pnl), 0), b.markets.day_pnl >= 0 ? "up" : "down"]);
-  $("tiles").innerHTML = tiles.map(([k, v, c]) => `<div class="tile ${c}"><dt>${k}</dt><dd class="num">${esc(v)}</dd></div>`).join("");
+  $("tiles").innerHTML = tiles.map(([k, v, c]) => `<div class="tile ${c}"><dt>${k}</dt><dd class="num"${typeof v === "number" ? ` data-count="${v}"` : ""}>${esc(v)}</dd></div>`).join("");
+  if (first) { countUp($("tiles")); }
 
   const focus = [...(b.buckets.attention || []), ...(b.buckets.active || [])].slice(0, 5);
   $("focusCount").textContent = focus.length ? `${focus.length} items` : "";
@@ -169,6 +171,7 @@ function renderHome() {
       <div class="stack">${p.stack.map((s) => `<span>${esc(s)}</span>`).join("")}</div>
     </a>`;
   }).join("") || `<p class="empty">No projects found. Add folders to <code>project_roots</code> in jarvis.toml.</p>`;
+  if (first) document.querySelectorAll("#tiles .tile, #focus li, #cards .card").forEach((el, i) => { el.style.animationDelay = `${120 + i * 45}ms`; el.classList.add("rise"); });
   $("marketsMini").hidden = !h.markets;
   $("marketsTab").hidden = false;
   renderWsList();
@@ -270,32 +273,175 @@ function md(text) { // tiny, safe markdown: escape first, then format
   return html + (list ? "</ul>" : "");
 }
 
-function visibleMessages() {
-  return H.messages.slice(-80);
+const projName = (pid) => (pid && H.hub ? H.hub.projects.find((p) => p.id === pid)?.name : "") || "";
+function metaLine(m) {
+  return m.role === "jarvis"
+    ? `${esc(m.brain || "JARVIS")}${m.ms ? ` · ${(m.ms / 1000).toFixed(1)}s` : ""}`
+    : esc(m.source === "hud" ? "you" : `you · ${m.source}`);
 }
 
-function renderMessages(jump) {
-  const ol = $("msgs");
-  const list = visibleMessages();
-  const nearBottom = ol.scrollHeight - ol.scrollTop - ol.clientHeight < 120;
+function briefCard(c) {
+  const chip = (k, v, cls = "") => `<span class="bc-stat ${cls}"><b class="num" data-count="${esc(v)}">${esc(v)}</b>${k}</span>`;
+  const mk = c.markets;
+  const stats = [chip("projects", c.projects), chip("need you", c.attention, c.attention ? "warn" : ""), chip("commits / 7d", c.commits_7d), chip("open tasks", c.tasks_open)];
+  if (mk) stats.push(`<span class="bc-stat mk ${mk.day_pnl >= 0 ? "up" : "down"}"><b class="num">${mk.day_pnl >= 0 ? "+" : "-"}${usd(Math.abs(mk.day_pnl), 0)}</b>markets today</span>`);
+  const label = { attention: "Needs you", active: "In progress", ready: "Ready" };
+  const rows = c.rows.map((r) => `<a class="bc-row" href="#projects/${esc(r.id)}"><span class="dot ${STATE[r.state][1]}"></span><span class="bc-name">${esc(r.name)}</span><span class="bc-why">${esc(r.reason)}</span><span class="bc-tag ${STATE[r.state][1]}">${label[r.state]}</span></a>`).join("");
+  return `<div class="brief"><div class="bc-stats">${stats.join("")}</div><div class="bc-rows">${rows}</div></div>`;
+}
+
+function msgHTML(m, text) {
+  const body = m.role === "jarvis" ? md(text ?? m.text) : `<p>${esc(m.text)}</p>`;
+  return `<div class="bubble">${body}</div>${m.role === "jarvis" && m.action?.brief ? `<div class="card-slot"></div>` : ""}<div class="meta num">${metaLine(m)} · ${hhmm(m.t)}</div>`;
+}
+
+let lastCtx = undefined;
+function dividerFor(m) {
+  const ctx = m.project || null;
+  if (ctx === lastCtx) return null;
+  const first = lastCtx === undefined;
+  lastCtx = ctx;
+  if (first && !ctx) return null;
+  const li = document.createElement("li");
+  li.className = "ctx-div";
+  li.innerHTML = `<span>${ctx ? esc(projName(ctx) || ctx) : "Workspace"}</span>`;
+  return li;
+}
+
+function welcomeHTML() {
   const brain = H.hub?.brain?.label || "your model";
-  const welcome = `<li class="welcome"><div class="reactor big" aria-hidden="true"><span></span><span></span><span></span></div>
+  return `<li class="welcome"><div class="reactor big" aria-hidden="true"><span></span><span></span><span></span></div>
     <h3>Hello. I'm JARVIS.</h3><p>I know every project you have, read the code with <b>${esc(brain)}</b>, and watch your markets. Type, or tap the mic and talk.</p>
-    <div class="caps"><span><b>Projects</b>"open orbit-api"</span><span><b>Brief</b>"brief me"</span><span><b>Memory</b>"remember …"</span><span><b>Phone</b>"call me"</span></div></li>`;
-  ol.innerHTML = (list.length ? "" : welcome) + list.map((m) => {
-    const proj = m.project && H.hub ? H.hub.projects.find((p) => p.id === m.project)?.name : "";
-    const meta = m.role === "jarvis"
-      ? `${esc(m.brain || "JARVIS")}${m.ms ? ` · ${(m.ms / 1000).toFixed(1)}s` : ""}${proj ? ` · ${esc(proj)}` : ""}`
-      : `${esc(m.source === "hud" ? "you" : `you · ${m.source}`)}`;
-    return `<li class="msg ${m.role}${m.action?.error ? " err" : ""}"><div class="bubble">${m.role === "jarvis" ? md(m.text) : `<p>${esc(m.text)}</p>`}</div><div class="meta num">${meta} · ${hhmm(m.t)}</div></li>`;
-  }).join("") + (H.busy ? `<li class="msg jarvis thinking"><div class="bubble"><span class="dots"><i></i><i></i><i></i></span> Thinking…</div></li>` : "");
+    <div class="caps"><span><b>Brief</b>"brief me"</span><span><b>Projects</b>"open orbit-api"</span><span><b>Memory</b>"remember …"</span><span><b>Phone</b>"call me"</span></div></li>`;
+}
+
+// Full render: only on load / reconnect. Live messages are appended, never re-rendered.
+function renderMessages() {
+  const ol = $("msgs");
+  lastCtx = undefined;
+  const list = H.messages.slice(-80);
+  ol.innerHTML = list.length ? "" : welcomeHTML();
+  for (const m of list) appendMessage(m, false);
   $("suggest").hidden = list.length > 0;
-  if (jump || nearBottom) ol.scrollTop = ol.scrollHeight;
+  syncThinking();
+  ol.scrollTop = ol.scrollHeight;
+}
+
+function appendMessage(m, live) {
+  const ol = $("msgs");
+  ol.querySelector(".welcome")?.remove();
+  $("suggest").hidden = true;
+  const div = dividerFor(m);
+  const think = $("thinkRow");
+  const before = think && think.parentNode === ol ? think : null;
+  if (div) ol.insertBefore(div, before);
+  const li = document.createElement("li");
+  li.className = `msg ${m.role}${m.action?.error ? " err" : ""}${live ? "" : " still"}`;
+  li.dataset.id = m.id;
+  ol.insertBefore(li, before);
+  if (!live || m.role !== "jarvis" || REDUCED) {
+    li.innerHTML = msgHTML(m);
+    if (m.action?.brief) li.querySelector(".card-slot").innerHTML = briefCard(m.action.brief);
+    if (live) followTo(li, true);
+    return;
+  }
+  typewrite(li, m);
+}
+
+// Reveal an answer word by word; follow it down until its top reaches the top of the console.
+function typewrite(li, m) {
+  const ol = $("msgs");
+  const words = m.text.split(/(\s+)/);
+  const n = words.length;
+  const dur = Math.max(450, Math.min(2600, n * 14));
+  const t0 = performance.now();
+  li.innerHTML = msgHTML(m, "");
+  li.classList.add("typing");
+  const bubble = li.querySelector(".bubble");
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / dur);
+    const shown = words.slice(0, Math.ceil(n * (1 - Math.pow(1 - k, 1.6)))).join("");
+    bubble.innerHTML = md(shown) || "&nbsp;";
+    followTo(li, false);
+    if (k < 1) { requestAnimationFrame(step); return; }
+    li.classList.remove("typing");
+    if (m.action?.brief) {
+      const slot = li.querySelector(".card-slot");
+      slot.innerHTML = briefCard(m.action.brief);
+      slot.querySelectorAll(".bc-stat, .bc-row").forEach((el, i) => { el.style.animationDelay = `${i * 70}ms`; el.classList.add("rise"); });
+      countUp(slot);
+    }
+    followTo(li, false, true);
+  };
+  requestAnimationFrame(step);
+}
+
+function followTo(li, smooth, settle) {
+  const ol = $("msgs");
+  const pin = Math.max(0, li.offsetTop - 14);
+  const bottom = ol.scrollHeight - ol.clientHeight;
+  const target = Math.min(pin, bottom);
+  if (smooth || settle) smoothScroll(ol, target);
+  else ol.scrollTop = target;
+}
+
+function smoothScroll(el, to) {
+  if (REDUCED) { el.scrollTop = to; return; }
+  const from = el.scrollTop, t0 = performance.now(), dur = 420;
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.scrollTop = from + (to - from) * e;
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function countUp(root) {
+  root.querySelectorAll("[data-count]").forEach((el) => {
+    const end = parseFloat(el.dataset.count);
+    if (!isFinite(end) || REDUCED) return;
+    const t0 = performance.now(), dur = 700;
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+// "Thinking" row with a live, honest timer.
+let thinkStart = 0, thinkTimer = 0;
+function syncThinking() {
+  const ol = $("msgs");
+  let row = $("thinkRow");
+  if (H.busy > 0) {
+    if (!row) {
+      row = document.createElement("li");
+      row.id = "thinkRow";
+      row.className = "msg jarvis thinking";
+      const p = projName(H.hub?.active);
+      row.innerHTML = `<div class="bubble"><div class="think-top"><span class="dots"><i></i><i></i><i></i></span><span>${esc(H.hub?.brain?.label || "JARVIS")} is working${p ? ` in <b>${esc(p)}</b>` : ""}</span><span class="num think-t" id="thinkT">0.0s</span></div><div class="scan"><i></i></div></div>`;
+      ol.appendChild(row);
+      thinkStart = performance.now();
+      const tick = (now) => {
+        const el = $("thinkT");
+        if (!el) return;
+        el.textContent = ((now - thinkStart) / 1000).toFixed(1) + "s";
+        thinkTimer = requestAnimationFrame(tick);
+      };
+      thinkTimer = requestAnimationFrame(tick);
+      smoothScroll(ol, ol.scrollHeight - ol.clientHeight);
+    }
+  } else if (row) {
+    cancelAnimationFrame(thinkTimer);
+    row.remove();
+  }
 }
 
 function renderBusy() {
   $("cReactor").classList.toggle("busy", H.busy > 0);
-  renderMessages();
+  syncThinking();
 }
 
 function renderContext() {
@@ -307,6 +453,7 @@ function renderContext() {
   $("suggest").innerHTML = sug.map(([l, q]) => `<button type="button" class="qchip" data-q="${esc(q)}">${esc(l)}</button>`).join("");
 }
 $("suggest").addEventListener("click", (e) => { const b = e.target.closest("[data-q]"); if (b) send(b.dataset.q); });
+$("msgs").addEventListener("click", (e) => { if (e.target.closest(".bc-row") && matchMedia("(max-width: 760px)").matches) openConsole(false); });
 
 let lastSource = "hud";
 async function send(text, source) {
@@ -322,8 +469,9 @@ async function send(text, source) {
     const r = await post("/api/ask", { text, project, source: lastSource });
     if (!r.ok) throw new Error((await r.json()).error || r.status);
   } catch (e) {
-    H.messages.push({ id: "e" + Date.now(), role: "jarvis", text: `Couldn't reach JARVIS: ${e.message}`, t: Date.now() / 1000, action: { error: true } });
-    renderMessages(true);
+    const m = { id: "e" + Date.now(), role: "jarvis", text: `Couldn't reach JARVIS: ${e.message}`, t: Date.now() / 1000, action: { error: true } };
+    H.messages.push(m);
+    appendMessage(m, true);
   }
 }
 
@@ -331,9 +479,9 @@ function onReply(m) {
   const a = m.action || {};
   if (a.view === "project" && a.project) { location.hash = `#projects/${a.project}`; }
   else if (a.view === "markets") { location.hash = "#markets"; }
-  else if (a.view === "home") { loadHub(); }
+  if (a.brief) loadHub(true);
   if (H.speak || lastSource === "voice") speak(m.text);
-  if (["notes", "tasks"].some((k) => /Noted|Added to/.test(m.text)) && H.project) loadProject(H.project.id, false);
+  if (/^(Noted|Added to)/.test(m.text) && H.project) loadProject(H.project.id, false);
 }
 
 $("composer").addEventListener("submit", (e) => { e.preventDefault(); send($("prompt").value); });
@@ -397,6 +545,8 @@ function speak(text) {
   const u = new SpeechSynthesisUtterance(clean);
   if (voice) u.voice = voice;
   u.rate = 1.04; u.pitch = 0.95;
+  u.onstart = () => document.body.classList.add("speaking");
+  u.onend = u.onerror = () => document.body.classList.remove("speaking");
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
 }
@@ -407,8 +557,44 @@ $("speakBtn").addEventListener("click", () => {
   if (!H.speak) try { speechSynthesis.cancel(); } catch {}
 });
 
+// ------------------------------------------------------------------ boot sequence (once per session)
+function boot() {
+  let seen = false;
+  try { seen = sessionStorage.getItem("jarvis.booted") === "1"; sessionStorage.setItem("jarvis.booted", "1"); } catch {}
+  const el = $("boot");
+  if (seen || REDUCED || !el) { el?.remove(); return; }
+  const h = H.hub;
+  const lines = [
+    `JARVIS ${h.version} · personal AI system`,
+    `Brain online · ${h.brain.label}`,
+    `${h.projects.length} projects indexed · ${h.briefing.commits_7d} commits this week`,
+    h.markets ? "Markets desk · live" : "Markets desk · standby",
+    "Voice · phone · memory ready",
+  ];
+  $("bootLines").innerHTML = lines.map((l) => `<li><span class="ok">▸</span><span class="bl"></span></li>`).join("");
+  el.hidden = false;
+  document.body.classList.add("booting");
+  const t0 = performance.now(), per = 260, total = 600 + lines.length * per + 700;
+  const items = [...$("bootLines").children];
+  const step = (now) => {
+    const t = now - t0;
+    items.forEach((li, i) => {
+      const k = Math.max(0, Math.min(1, (t - 500 - i * per) / (per * 0.9)));
+      li.classList.toggle("on", k > 0);
+      li.querySelector(".bl").textContent = lines[i].slice(0, Math.ceil(lines[i].length * k));
+    });
+    $("bootPct").textContent = Math.min(100, Math.round((t / (total - 500)) * 100)) + "%";
+    if (t >= total - 500) { $("bootDone").classList.add("on"); }
+    if (t < total) { requestAnimationFrame(step); return; }
+    el.classList.add("out");
+    document.body.classList.remove("booting");
+    setTimeout(() => el.remove(), 650);
+  };
+  requestAnimationFrame(step);
+}
+
 // ------------------------------------------------------------------ boot
-setInterval(() => { if (!document.hidden && document.body.dataset.view === "home") loadHub(); }, 60000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden && H.hub) loadHub(); });
+setInterval(() => { if (!document.hidden && document.body.dataset.view === "home") loadHub(true); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && H.hub) loadHub(true); });
 loadHub();
 connect();

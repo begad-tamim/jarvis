@@ -267,6 +267,54 @@ h1 { margin: 0; font-size: clamp(28px, 3.2vw, 44px); letter-spacing: -0.035em; l
 .mic[aria-pressed="true"] .mic-core { border-color: #031016; background: #031016; }
 .listening .composer textarea { border-color: var(--accent); }
 
+/* ---------------------------------------------------------------- live console */
+.msg.still { animation: none; }
+.ctx-div { list-style: none; display: flex; align-items: center; gap: 10px; margin: 4px 0; font: 600 10.5px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.ctx-div::before, .ctx-div::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-2), transparent); }
+.msg.typing .bubble > :last-child::after { content: ""; display: inline-block; width: 7px; height: 14px; margin-left: 3px; vertical-align: -2px; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.think-top { display: flex; align-items: center; gap: 10px; }
+.think-top b { color: var(--accent); font-family: var(--mono); font-weight: 600; }
+.think-t { margin-left: auto; color: var(--text-3); font-size: 12px; }
+.scan { position: relative; height: 2px; margin-top: 10px; border-radius: 2px; background: rgba(95, 216, 245, 0.12); overflow: hidden; }
+.scan i { position: absolute; top: 0; bottom: 0; width: 35%; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+.msg.thinking .bubble { min-width: 260px; }
+.card-slot { width: 100%; }
+.brief { margin-top: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(6, 9, 13, 0.6); }
+.bc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.bc-stat.mk { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 8px; }
+.bc-stat { display: flex; flex-direction: column; padding: 7px 8px; line-height: 1.25; border-radius: 10px; background: rgba(95, 216, 245, 0.05); border: 1px solid var(--line); font-size: 10.5px; color: var(--text-3); }
+.bc-stat b { font-size: 17px; color: var(--text); font-weight: 600; letter-spacing: -0.02em; }
+.bc-stat.warn b { color: var(--warn); } .bc-stat.up b { color: var(--up); } .bc-stat.down b { color: var(--down); }
+.bc-rows { display: flex; flex-direction: column; }
+.bc-row { display: grid; grid-template-columns: 10px auto 1fr; grid-template-rows: auto auto; column-gap: 9px; align-items: center; padding: 8px 6px; border-top: 1px solid var(--line); border-radius: 8px; transition: background 0.2s; }
+.bc-row:first-child { border-top: 0; }
+.bc-row:hover { background: rgba(95, 216, 245, 0.06); }
+.bc-name { font: 600 12.5px var(--mono); }
+.bc-tag { justify-self: end; font: 700 9.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 6px; border-radius: 999px; color: var(--text-2); background: rgba(255, 255, 255, 0.06); }
+.bc-tag.attention { color: var(--warn); background: var(--warn-dim); } .bc-tag.active { color: var(--accent); background: var(--accent-dim); } .bc-tag.ready { color: var(--up); background: var(--up-dim); }
+.bc-why { grid-column: 2 / 4; grid-row: 2; font-size: 12px; color: var(--text-2); }
+.bc-row .dot { grid-row: 1; }
+.rise { animation: rise 0.55s var(--ease) both; }
+.say { display: none; align-items: center; gap: 3px; height: 18px; margin-left: 6px; }
+.say i { width: 3px; height: 6px; border-radius: 2px; background: var(--accent); }
+.speaking .say { display: inline-flex; }
+
+/* ---------------------------------------------------------------- boot sequence */
+.boot { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(800px 600px at 50% 40%, rgba(95, 216, 245, 0.12), transparent 70%), #04070a; transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+.boot.out { opacity: 0; transform: scale(1.06); pointer-events: none; }
+.boot-inner { width: min(520px, 88vw); text-align: center; }
+.reactor.xl { width: 140px; height: 140px; margin: 0 auto 26px; animation: bootin 0.9s var(--ease) both; }
+.reactor.xl span:nth-child(2) { inset: 22px; }
+.reactor.xl span:nth-child(3) { inset: 44px; }
+.boot-name { font-size: 40px; font-weight: 700; letter-spacing: 0.42em; padding-left: 0.42em; margin-bottom: 22px; animation: rise 0.7s 0.25s var(--ease) both; }
+.boot-lines { list-style: none; margin: 0 auto; padding: 0; text-align: left; display: inline-flex; flex-direction: column; gap: 7px; min-height: 150px; font: 13px var(--mono); color: var(--text-2); }
+.boot-lines li { opacity: 0; display: flex; gap: 10px; }
+.boot-lines li.on { opacity: 1; }
+.boot-lines .ok { color: var(--accent); }
+.boot-foot { display: flex; justify-content: center; gap: 16px; margin-top: 18px; font: 600 12px var(--mono); letter-spacing: 0.16em; color: var(--text-3); }
+.boot-done { opacity: 0; color: var(--up); transition: opacity 0.3s; }
+.boot-done.on { opacity: 1; }
+
 /* ---------------------------------------------------------------- markets view */
 .mk-bar { display: flex; align-items: center; gap: 14px; padding: 2px 4px 12px; flex-wrap: wrap; }
 .status { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); white-space: nowrap; flex: 1; }
@@ -399,6 +447,10 @@ tr.flash td { animation: flash 1.4s var(--ease); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.92); opacity: 0.85; } }
 @keyframes blink { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes bootin { from { opacity: 0; transform: scale(0.4) rotate(-90deg); } to { opacity: 1; transform: none; } }
+@keyframes sweep { from { left: -35%; } to { left: 100%; } }
+@keyframes eq { 0%, 100% { height: 4px; } 50% { height: 16px; } }
 @media (prefers-reduced-motion: no-preference) {
   .pulse.on { animation: ping 1.6s ease-out infinite; }
   .reactor span:nth-child(2), .core-ring.r2 { animation: spin 14s linear infinite; }
@@ -410,6 +462,10 @@ tr.flash td { animation: flash 1.4s var(--ease); }
   .dots i:nth-child(2) { animation-delay: 0.18s; }
   .dots i:nth-child(3) { animation-delay: 0.36s; }
   .mic[aria-pressed="true"] { animation: ping 1.2s ease-out infinite; }
+  .scan i { animation: sweep 1.3s ease-in-out infinite; }
+  .say i { animation: eq 0.8s ease-in-out infinite; }
+  .say i:nth-child(2) { animation-delay: 0.12s; } .say i:nth-child(3) { animation-delay: 0.24s; } .say i:nth-child(4) { animation-delay: 0.36s; } .say i:nth-child(5) { animation-delay: 0.48s; }
+  .reactor.xl span:nth-child(2) { animation: spin 3s linear infinite; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

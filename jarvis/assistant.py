@@ -142,11 +142,7 @@ class Assistant:
             r"(brief me|briefing|daily briefing|morning( briefing)?|what'?s (up|my day|new)|status report|good morning( jarvis)?)", t
         ):
             b = self.briefing(force=True)
-            extra = ""
-            if "markets" in b:
-                m = b["markets"]
-                extra = f" Markets: equity ${m['equity']:,.0f}, {'+' if m['day_pnl'] >= 0 else '-'}${abs(m['day_pnl']):,.0f} today, {m['positions']} open positions."
-            return reply(b["headline"] + extra + (f" {b['tasks_open']} open tasks." if b["tasks_open"] else ""), view="home")
+            return reply(self._brief_text(b), brief=self._brief_card(b))
 
         m = re.match(r"^(?:jarvis[, ]+)?(?:open|switch to|go to|jump to|work on|load)\s+(.+)$", t)
         if m:
@@ -222,6 +218,47 @@ class Assistant:
             self.voice.call(m.group(1) or "This is JARVIS. You asked me to call you.")
             return reply("Calling your phone now.")
         return None
+
+    # ------------------------------------------------------------------ the briefing, spoken like a person
+    def _brief_text(self, b: dict[str, Any]) -> str:
+        hour = time.localtime().tm_hour
+        hello = "Working late." if hour < 5 else "Good morning." if hour < 12 else "Good afternoon." if hour < 18 else "Good evening."
+        parts = [hello]
+        att = b["buckets"].get("attention", [])
+        if att:
+            named = " and ".join(f"{x['name']} ({x['reason'].split(' - ')[0]})" for x in att[:2])
+            parts.append(f"{len(att)} project{'s' * (len(att) != 1)} need{'s' * (len(att) == 1)} you: {named}.")
+        else:
+            parts.append("Nothing is on fire. Every project is committed and in sync.")
+        act = b["buckets"].get("active", [])
+        ready = b["buckets"].get("ready", [])
+        if act:
+            parts.append(f"{', '.join(x['name'] for x in act[:2])} {'is' if len(act) == 1 else 'are'} in progress.")
+        if ready:
+            parts.append(f"{len(ready)} {'is' if len(ready) == 1 else 'are'} clean and ready.")
+        if "markets" in b:
+            m = b["markets"]
+            word = "up" if m["day_pnl"] >= 0 else "down"
+            parts.append(f"Markets are {word} ${abs(m['day_pnl']):,.0f} today with {m['positions']} open positions.")
+        if b["tasks_open"]:
+            parts.append(f"You have {b['tasks_open']} open tasks.")
+        return " ".join(parts)
+
+    def _brief_card(self, b: dict[str, Any]) -> dict[str, Any]:
+        items = {i["id"]: i for i in self.registry.all()}
+        rows = []
+        for state in ("attention", "active", "ready"):
+            for x in b["buckets"].get(state, [])[:3]:
+                st = items.get(x["id"], {}).get("status", {})
+                rows.append({"id": x["id"], "name": x["name"], "state": state, "reason": x["reason"], "todos": st.get("todos", 0)})
+        return {
+            "projects": b["projects"],
+            "attention": len(b["buckets"].get("attention", [])),
+            "commits_7d": b["commits_7d"],
+            "tasks_open": b["tasks_open"],
+            "markets": b.get("markets"),
+            "rows": rows[:6],
+        }
 
     # ------------------------------------------------------------------ the brain
     def _context(self, pid: str | None) -> str:
