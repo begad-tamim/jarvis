@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jarvis-os"
 version = "2.0.0"
-description = "JARVIS: open-source AI command center for developers. Every project at a glance, ask anything with Claude Code / Codex / Gemini / Ollama, voice, phone calls, and an autonomous trading desk. Zero dependencies."
+description = "JARVIS: your personal AI system, open source. Every project at a glance, ask anything with Claude Code / Codex / Gemini / Ollama, voice, phone calls, and an autonomous trading desk. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

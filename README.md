@@ -2,9 +2,11 @@
 
 <img src="docs/assets/logo.svg" width="88" alt="JARVIS arc reactor logo">
 
-# JARVIS · Your open-source AI command center
+# JARVIS · Your Personal AI System
 
-**One assistant for every project you own. It reads your code with *any* AI model, talks with you by voice, picks up when you call it, and runs a trading desk while you work.**
+**The assistant every developer has wanted since 2008. Now it's open source.**
+
+One AI that knows all your work: every project you own, read with *any* model. It talks with you by voice, picks up when you call it, and runs a trading desk while you work.
 
 Claude Code · Codex · Gemini CLI · Ollama · any CLI agent. Swap the brain with one line. Your code never leaves your machine.
 
@@ -18,7 +20,7 @@ Claude Code · Codex · Gemini CLI · Ollama · any CLI agent. Swap the brain wi
 
 [**Try it in 30 seconds**](#-try-it-in-30-seconds) · [What it does](#-what-jarvis-does) · [Any brain](#-any-brain-swap-it-in-one-line) · [On your phone](#-on-your-phone-voice-and-calls) · [Markets](#-markets-autonomous-trading-inside-hard-limits) · [Security](#-security) · [FAQ](#-faq)
 
-<img src="docs/assets/demo.gif" alt="JARVIS AI command center: daily briefing across projects, asking questions about a codebase, switching projects by voice, and the autonomous trading dashboard" width="100%">
+<img src="docs/assets/demo.gif" alt="JARVIS personal AI system: daily briefing across projects, asking questions about a codebase, switching projects by voice, and the autonomous trading dashboard" width="100%">
 
 <sub><code>jarvis demo</code>: a sample workspace of 7 real git repos plus a simulated market. No keys, no account, nothing leaves your machine.</sub>
 
@@ -272,6 +274,6 @@ For education and research. The markets module is **not financial advice**. Trad
 
 Built by **Begad Tamim**, AI engineer · [GitHub](https://github.com/begad-tamim) · [LinkedIn](https://www.linkedin.com/in/begad-tamim) · MIT License
 
-<sub>JARVIS AI assistant · open-source personal AI assistant · AI command center for developers · Claude Code UI · Codex CLI · Gemini CLI · Ollama · voice AI assistant · AI phone assistant · project manager for developers · daily standup briefing · AI trading bot · Alpaca trading bot · autonomous agent · lightweight · fast · zero dependencies</sub>
+<sub>JARVIS AI assistant · personal AI system · open-source personal AI assistant · AI command center for developers · Claude Code UI · Codex CLI · Gemini CLI · Ollama · voice AI assistant · AI phone assistant · project manager for developers · daily standup briefing · AI trading bot · Alpaca trading bot · autonomous agent · lightweight · fast · zero dependencies</sub>
 
 </div>

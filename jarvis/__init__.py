@@ -1,4 +1,4 @@
-"""JARVIS - open-source AI command center.
+"""JARVIS - your personal AI system, open source.
 
 Every project at a glance, any brain (Claude Code, Codex, Gemini, Ollama),
 voice, phone and calls, plus an autonomous trading desk on Alpaca.

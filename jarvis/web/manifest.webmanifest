@@ -1,7 +1,7 @@
 {
   "name": "JARVIS",
   "short_name": "JARVIS",
-  "description": "Your AI command center: projects, any brain, voice, phone, markets.",
+  "description": "Your personal AI system: projects, any brain, voice, phone, markets.",
   "start_url": "/#home",
   "scope": "/",
   "display": "standalone",

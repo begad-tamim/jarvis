@@ -2,7 +2,7 @@
 
 ## 2.0.0 - 2026-11-09
 
-JARVIS becomes a full AI command center. Trading is now one module.
+JARVIS becomes your personal AI system. Trading is now one module.
 
 - **Projects**: discovers your git repos, shows live status (dirty, ahead, behind, stale, TODOs) and a free daily briefing
 - **Any brain**: Claude Code, Codex, Gemini CLI, Ollama, Claude API, any command (`brain = "cmd"`) or offline. Runs inside the active project, read-only by default

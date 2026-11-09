@@ -35,7 +35,7 @@ BANNER = r"""
      ██║███████║██████╔╝██║   ██║██║███████╗
 ██   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║
 ╚█████╔╝██║  ██║██║  ██║ ╚████╔╝ ██║███████║
- ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝  your AI command center v{v}
+ ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝  your personal AI system v{v}
 """
 
 C = {
@@ -515,7 +515,7 @@ def cmd_doctor(args, cfg: Config, env_warnings: list[str]) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(prog="jarvis", description="JARVIS - your AI command center: projects, any brain, phone, markets")
+    p = argparse.ArgumentParser(prog="jarvis", description="JARVIS - your personal AI system: projects, any brain, voice, phone, markets")
     p.add_argument("--config", "-c", help="path to jarvis.toml (default: ./jarvis.toml if present)")
     p.add_argument("--version", action="version", version=f"jarvis {__version__}")
     p.add_argument("-v", "--verbose", action="store_true")
