@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-trading-agent"
+version = "1.0.0"
+description = "JARVIS: an autonomous AI stock trading agent. Claude / LLM analyst + quant signals + hard-coded risk guardrails, trading on Alpaca. Paper by default, zero dependencies, live HUD dashboard."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Begad Tamim" }]
+keywords = [
+  "jarvis", "trading-bot", "ai-trading", "algorithmic-trading", "alpaca", "claude", "anthropic", "llm",
+  "ai-agent", "autonomous-agent", "stock-market", "paper-trading", "backtesting", "quant", "ollama",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Financial :: Investment",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.optional-dependencies]
+ai = ["anthropic>=0.70"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+jarvis = "jarvis.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/begad-tamim/jarvis-trading-agent"
+Issues = "https://github.com/begad-tamim/jarvis-trading-agent/issues"
+
+[tool.setuptools.packages.find]
+include = ["jarvis*"]
+
+[tool.setuptools.package-data]
+jarvis = ["web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "N"]
+ignore = ["S101", "S311", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "B", "N"]

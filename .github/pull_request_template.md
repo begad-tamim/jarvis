@@ -1,0 +1,3 @@
+- [ ] `ruff check jarvis tests && ruff format --check jarvis tests && pytest -q` passes
+- [ ] No new required dependencies (optional extras are fine)
+- [ ] If this touches `risk.py` or order placement, tests prove the guardrail still holds

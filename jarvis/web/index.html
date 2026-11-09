@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#06090d">
+  <title>JARVIS · Autonomous Trading Agent</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <h1 class="sr-only">JARVIS autonomous trading dashboard</h1>
+  <a class="skip" href="#main">Skip to dashboard</a>
+  <header class="top">
+    <div class="brand">
+      <div class="reactor" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="wordmark" translate="no">
+        <strong>JARVIS</strong>
+        <small>autonomous trading agent</small>
+      </div>
+      <span class="badge" id="modeBadge">CONNECTING</span>
+    </div>
+    <div class="status" role="status" aria-live="polite">
+      <span class="pulse" id="statusPulse" aria-hidden="true"></span>
+      <span id="statusText">Connecting to the engine…</span>
+      <span class="status-meta" id="statusMeta"></span>
+    </div>
+    <div class="controls">
+      <button class="btn ghost" id="pauseBtn" type="button" disabled>Pause</button>
+      <button class="btn kill" id="killBtn" type="button" disabled aria-describedby="killHint">
+        <span class="kill-fill" aria-hidden="true"></span>
+        <span class="kill-label">Hold to Kill</span>
+      </button>
+      <span class="sr-only" id="killHint">Press and hold for one second to cancel all orders and close every position.</span>
+    </div>
+  </header>
+
+  <main id="main" class="grid" translate="no">
+    <section class="panel equity" aria-labelledby="eqTitle">
+      <div class="panel-head">
+        <h2 id="eqTitle">Portfolio</h2>
+        <span class="muted" id="brokerName"></span>
+      </div>
+      <div class="eq-hero">
+        <div>
+          <div class="eq-value num" id="eqValue">$0.00</div>
+          <div class="eq-sub">
+            <span class="chip num" id="eqTotal">+0.00%</span>
+            <span class="muted">since start</span>
+            <span class="chip num" id="eqDay">+$0.00</span>
+            <span class="muted">today</span>
+          </div>
+        </div>
+        <dl class="kpis">
+          <div><dt>Cash</dt><dd class="num" id="kCash">$0</dd></div>
+          <div><dt>Invested</dt><dd class="num" id="kExposure">0%</dd></div>
+          <div><dt>Win rate</dt><dd class="num" id="kWin">n/a</dd></div>
+          <div><dt>Realized</dt><dd class="num" id="kRealized">$0</dd></div>
+        </dl>
+      </div>
+      <div class="chart-wrap"><canvas id="eqChart" aria-label="Equity curve" role="img"></canvas></div>
+    </section>
+
+    <section class="panel radar" aria-labelledby="radarTitle">
+      <div class="panel-head">
+        <h2 id="radarTitle">Signal radar</h2>
+        <span class="muted" id="regime"></span>
+      </div>
+      <div class="radar-body">
+        <canvas id="radarChart" role="img" aria-label="Quant scores for the top symbols"></canvas>
+        <ol class="ranks" id="ranks"></ol>
+      </div>
+    </section>
+
+    <section class="panel mind" aria-labelledby="mindTitle">
+      <div class="panel-head">
+        <h2 id="mindTitle">Live reasoning</h2>
+        <span class="muted" id="analystName"></span>
+      </div>
+      <div class="guards" id="guards" aria-label="Risk guardrails"></div>
+      <ol class="stream" id="stream" aria-live="off"></ol>
+    </section>
+
+    <section class="panel positions" aria-labelledby="posTitle">
+      <div class="panel-head">
+        <h2 id="posTitle">Positions</h2>
+        <span class="muted" id="posCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Symbol</th><th scope="col" class="r">Value</th><th scope="col" class="r">P&amp;L</th><th scope="col" class="ladder-h">Stop · price · target</th></tr>
+          </thead>
+          <tbody id="posBody"></tbody>
+        </table>
+        <p class="empty" id="posEmpty">No open positions. JARVIS is waiting for a setup that passes every guardrail.</p>
+      </div>
+    </section>
+
+    <section class="panel decision" aria-labelledby="decTitle">
+      <div class="panel-head">
+        <h2 id="decTitle">Latest decision</h2>
+        <span class="muted" id="decTime"></span>
+      </div>
+      <div id="decBody" class="dec-body">
+        <p class="empty">The first analyst review lands after the first scan.</p>
+      </div>
+    </section>
+
+    <section class="panel tape" aria-labelledby="tapeTitle">
+      <div class="panel-head">
+        <h2 id="tapeTitle">Executions</h2>
+        <span class="muted" id="tapeCount"></span>
+      </div>
+      <ol class="trades" id="trades"></ol>
+    </section>
+  </main>
+
+  <div class="gate" id="gate" hidden>
+    <div class="gate-card">
+      <div class="reactor big" aria-hidden="true"><span></span><span></span><span></span></div>
+      <h1>Access key needed</h1>
+      <p>Open the dashboard with the link printed in your terminal. It carries a private key, so nobody else on your machine or network can drive JARVIS.</p>
+      <code>jarvis demo</code>
+    </div>
+  </div>
+</body>
+</html>
