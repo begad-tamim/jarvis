@@ -1,0 +1,41 @@
+# Copy to ./jarvis.toml and edit. Secrets never go in this file: they live in .env.
+
+[jarvis]
+mode = "paper"                 # demo | paper | live   (live also needs JARVIS_LIVE_TRADING, see .env.example)
+universe = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "AMD", "NFLX",
+            "COST", "JPM", "V", "LLY", "UNH", "XOM", "PLTR", "CRM", "ORCL", "ADBE"]
+benchmark = "SPY"              # used for the market-regime filter and relative strength
+timeframe = "15Min"            # 1Min 5Min 15Min 30Min 1Hour 1Day
+lookback = 200                 # candles per symbol per scan
+scan_interval_sec = 300        # how often to rescan the universe
+analyst = "rules"              # rules | claude | claude-code | ollama
+# analyst_model = "claude-opus-5-5"   # or claude-haiku-5-5 for cheaper runs, or an Ollama model like "qwen2.5:7b"
+analyst_effort = "medium"
+analyst_interval_sec = 900     # max one LLM review per 15 min (cost control)
+max_candidates = 5
+broker_side_stops = true       # bracket orders: the stop lives at Alpaca, safe even if JARVIS dies
+flatten_eod = false            # close everything 10 minutes before the bell
+dashboard_host = "127.0.0.1"   # keep local unless you know what you're doing
+dashboard_port = 8777
+
+[strategy]
+entry_score = 45               # quant score needed to consider a buy (-100..100)
+exit_score = -15               # score that triggers a signal exit
+rsi_overbought = 78
+regime_filter = true
+
+[risk]
+risk_per_trade_pct = 0.01      # lose at most 1% of equity if a stop is hit
+max_position_pct = 0.10        # max 10% of equity in one stock
+max_positions = 8
+max_gross_exposure_pct = 0.95  # never borrows: capped below 100%
+stop_atr_mult = 2.0
+take_profit_atr_mult = 4.0     # 2:1 reward-to-risk
+trailing_atr_mult = 2.5
+max_daily_loss_pct = 0.03      # stop opening trades after -3% on the day
+max_drawdown_pct = 0.15        # kill switch at -15% from peak equity
+max_trades_per_day = 20        # new entries per day
+min_price = 5.0
+min_conviction = 0.55
+cooldown_minutes = 60
+blocklist = []
