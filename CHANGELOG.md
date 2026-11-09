@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.1 - 2026-11-09
+
+A console that feels alive.
+
+- **Brief me** answers in one line plus a live briefing card (needs you / in progress / ready)
+- Answers type in word by word; the console only follows when you are at the bottom, so long answers never jump
+- "Thinking" row shows the brain, the project and a live timer
+- One-time boot sequence, count-up stats, project dividers in the conversation, speaking indicator for voice
+- Shorter, sharper brain answers (about 150 words, no tool chatter)
+- Home P&L tile follows the live markets feed
+- New demo GIF and screenshots, recorded frame by frame
+
 ## 2.0.0 - 2026-11-09
 
 JARVIS becomes your personal AI system. Trading is now one module.
