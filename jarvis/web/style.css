@@ -274,10 +274,13 @@ h1 { margin: 0; font-size: clamp(28px, 3.2vw, 44px); letter-spacing: -0.035em; l
 .msg.typing .bubble > :last-child::after { content: ""; display: inline-block; width: 7px; height: 14px; margin-left: 3px; vertical-align: -2px; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .think-top { display: flex; align-items: center; gap: 10px; }
 .think-top b { color: var(--accent); font-family: var(--mono); font-weight: 600; }
-.think-t { margin-left: auto; color: var(--text-3); font-size: 12px; }
+.think-t { margin-left: auto; color: var(--text-3); font-size: 12px; white-space: nowrap; min-width: 6ch; text-align: right; flex: none; }
+.think-top b { white-space: nowrap; }
+.msg.thinking { max-width: 100%; }
+.msg.thinking .bubble { display: block; width: 100%; max-width: 100%; }
+.think-top > span:nth-child(2) { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scan { position: relative; height: 2px; margin-top: 10px; border-radius: 2px; background: rgba(95, 216, 245, 0.12); overflow: hidden; }
 .scan i { position: absolute; top: 0; bottom: 0; width: 35%; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
-.msg.thinking .bubble { min-width: 260px; }
 .card-slot { width: 100%; }
 .brief { margin-top: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(6, 9, 13, 0.6); }
 .bc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }

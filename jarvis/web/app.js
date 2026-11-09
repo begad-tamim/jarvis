@@ -150,7 +150,7 @@ function renderHome(first) {
     ["Open tasks", b.tasks_open, ""],
   ];
   if (b.markets) tiles.push(["Portfolio today", (b.markets.day_pnl >= 0 ? "+" : "-") + usd(Math.abs(b.markets.day_pnl), 0), b.markets.day_pnl >= 0 ? "up" : "down"]);
-  $("tiles").innerHTML = tiles.map(([k, v, c]) => `<div class="tile ${c}"><dt>${k}</dt><dd class="num"${typeof v === "number" ? ` data-count="${v}"` : ""}>${esc(v)}</dd></div>`).join("");
+  $("tiles").innerHTML = tiles.map(([k, v, c]) => `<div class="tile ${c}"${k === "Portfolio today" ? ' id="pnlTile"' : ""}><dt>${k}</dt><dd class="num"${typeof v === "number" ? ` data-count="${v}"` : ""}>${esc(v)}</dd></div>`).join("");
   if (first) { countUp($("tiles")); }
 
   const focus = [...(b.buckets.attention || []), ...(b.buckets.active || [])].slice(0, 5);
@@ -185,6 +185,11 @@ window.JARVIS = {
     const day = $("mmDay");
     day.textContent = (a.day_pl >= 0 ? "+" : "-") + usd(Math.abs(a.day_pl), 0) + " today";
     day.className = "chip num " + (a.day_pl > 0 ? "up" : a.day_pl < 0 ? "down" : "");
+    const tile = $("pnlTile"); // keep the home tile in step with the live markets card
+    if (tile) {
+      tile.className = "tile " + (a.day_pl >= 0 ? "up" : "down");
+      tile.querySelector("dd").textContent = (a.day_pl >= 0 ? "+" : "-") + usd(Math.abs(a.day_pl), 0);
+    }
     $("mmPos").textContent = `${s.positions.length} positions · ${s.status}`;
     const t = [...(s.thoughts || [])].reverse().find((x) => x.kind !== "scan");
     $("mmThought").textContent = t ? (t.symbol ? t.symbol + " · " : "") + t.text : "";
@@ -360,7 +365,8 @@ function typewrite(li, m) {
   const bubble = li.querySelector(".bubble");
   const step = (now) => {
     const k = Math.min(1, (now - t0) / dur);
-    const shown = words.slice(0, Math.ceil(n * (1 - Math.pow(1 - k, 1.6)))).join("");
+    let shown = words.slice(0, Math.ceil(n * (1 - Math.pow(1 - k, 1.6)))).join("");
+    if (k < 1) shown = closeMarks(shown);
     bubble.innerHTML = md(shown) || "&nbsp;";
     followTo(li, false);
     if (k < 1) { requestAnimationFrame(step); return; }
@@ -374,6 +380,13 @@ function typewrite(li, m) {
     followTo(li, false, true);
   };
   requestAnimationFrame(step);
+}
+
+// Close a half-typed **bold** or `code` span so raw markers never flash on screen.
+function closeMarks(s) {
+  if ((s.match(/\*\*/g) || []).length % 2) s += "**";
+  if ((s.match(/`/g) || []).length % 2) s += "`";
+  return s;
 }
 
 function followTo(li, smooth, settle) {
