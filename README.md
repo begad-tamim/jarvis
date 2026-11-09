@@ -130,7 +130,7 @@ TWILIO_ACCOUNT_SID=AC...   TWILIO_AUTH_TOKEN=...   TWILIO_FROM=+1555...   JARVIS
 JARVIS_PUBLIC_URL=https://your-mac.your-tailnet.ts.net    # e.g. `tailscale funnel 8777`
 ```
 
-- **JARVIS calls you:** `jarvis call "deploy finished"`, say *"call me"*, or get a call automatically when the trading kill switch fires.
+- **JARVIS calls you:** `jarvis call "deploy finished"`, say *"call me"*, or get a call automatically when the trading kill switch fires. It works in any script, too: `./deploy.sh || jarvis call "Prod deploy failed. Check the logs."`
 - **You call JARVIS:** point your Twilio number's voice webhook at `$JARVIS_PUBLIC_URL/voice/incoming` and talk. Your speech goes to the same assistant, and the answer is read back to you.
 - Every webhook must carry a valid **Twilio signature**, and **only your number** is answered.
 
