@@ -279,7 +279,7 @@ This software is for education and research. It is **not financial advice**. Tra
 
 <div align="center">
 
-Built by **[Begad Tamim](https://github.com/begad-tamim)**, AI engineer · MIT License
+Built by **Begad Tamim**, AI engineer · [GitHub](https://github.com/begad-tamim) · [LinkedIn](https://www.linkedin.com/in/begad-tamim) · MIT License
 
 <sub>AI trading bot · autonomous trading agent · LLM trading agent · Claude trading bot · Alpaca trading bot in Python · algorithmic trading · paper trading · stock market AI · Ollama · JARVIS AI</sub>
 
