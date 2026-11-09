@@ -2,127 +2,222 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#06090d">
-  <title>JARVIS · Autonomous Trading Agent</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="JARVIS">
+  <title>JARVIS · AI command center</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
+  <script src="markets.js" defer></script>
 </head>
-<body>
-  <h1 class="sr-only">JARVIS autonomous trading dashboard</h1>
-  <a class="skip" href="#main">Skip to dashboard</a>
+<body data-view="home">
+  <a class="skip" href="#content">Skip to content</a>
   <header class="top">
     <div class="brand">
       <div class="reactor" aria-hidden="true"><span></span><span></span><span></span></div>
       <div class="wordmark" translate="no">
         <strong>JARVIS</strong>
-        <small>autonomous trading agent</small>
+        <small>AI command center</small>
       </div>
-      <span class="badge" id="modeBadge">CONNECTING</span>
+      <span class="badge demo" id="demoBadge" hidden>DEMO</span>
     </div>
-    <div class="status" role="status" aria-live="polite">
-      <span class="pulse" id="statusPulse" aria-hidden="true"></span>
-      <span id="statusText">Connecting to the engine…</span>
-      <span class="status-meta" id="statusMeta"></span>
-    </div>
-    <div class="controls">
-      <button class="btn ghost" id="pauseBtn" type="button" disabled>Pause</button>
-      <button class="btn kill" id="killBtn" type="button" disabled aria-describedby="killHint">
-        <span class="kill-fill" aria-hidden="true"></span>
-        <span class="kill-label">Hold to Kill</span>
-      </button>
-      <span class="sr-only" id="killHint">Press and hold for one second to cancel all orders and close every position.</span>
+    <nav class="tabs" aria-label="Views">
+      <a href="#home" data-nav="home" class="tab">Home</a>
+      <a href="#projects" data-nav="projects" class="tab">Projects</a>
+      <a href="#markets" data-nav="markets" class="tab" id="marketsTab">Markets</a>
+    </nav>
+    <div class="top-right">
+      <span class="brain-chip" id="brainChip" title="The model behind JARVIS. Swap it in jarvis.toml."><i aria-hidden="true"></i><span id="brainName">…</span></span>
+      <span class="pulse" id="linkPulse" aria-hidden="true"></span>
+      <span class="sr-only" id="linkText" role="status">Connecting</span>
+      <button class="btn ghost ask-toggle" id="askToggle" type="button" aria-controls="console" aria-expanded="false">Ask JARVIS <kbd>/</kbd></button>
     </div>
   </header>
 
-  <main id="main" class="grid" translate="no">
-    <section class="panel equity" aria-labelledby="eqTitle">
-      <div class="panel-head">
-        <h2 id="eqTitle">Portfolio</h2>
-        <span class="muted" id="brokerName"></span>
-      </div>
-      <div class="eq-hero">
-        <div>
-          <div class="eq-value num" id="eqValue">$0.00</div>
-          <div class="eq-sub">
-            <span class="chip num" id="eqTotal">+0.00%</span>
-            <span class="muted">since start</span>
-            <span class="chip num" id="eqDay">+$0.00</span>
-            <span class="muted">today</span>
+  <div class="shell">
+    <main id="content" class="content" tabindex="-1">
+      <!-- ============================================================ HOME -->
+      <section class="view" id="view-home" aria-labelledby="hello">
+        <div class="hero">
+          <div class="hero-text">
+            <p class="eyebrow num" id="today"></p>
+            <h1 id="hello">Good evening.</h1>
+            <p class="headline" id="headline">Reading your workspace…</p>
+          </div>
+          <div class="core" aria-hidden="true">
+            <div class="core-ring r1"></div><div class="core-ring r2"></div><div class="core-ring r3"></div><div class="core-dot"></div>
           </div>
         </div>
-        <dl class="kpis">
-          <div><dt>Cash</dt><dd class="num" id="kCash">$0</dd></div>
-          <div><dt>Invested</dt><dd class="num" id="kExposure">0%</dd></div>
-          <div><dt>Win rate</dt><dd class="num" id="kWin">n/a</dd></div>
-          <div><dt>Realized</dt><dd class="num" id="kRealized">$0</dd></div>
-        </dl>
-      </div>
-      <div class="chart-wrap"><canvas id="eqChart" aria-label="Equity curve" role="img"></canvas></div>
-    </section>
+        <dl class="tiles" id="tiles"></dl>
+        <div class="home-grid">
+          <section class="block" aria-labelledby="focusTitle">
+            <div class="block-head"><h2 id="focusTitle">Needs you</h2><span class="muted" id="focusCount"></span></div>
+            <ol class="focus" id="focus"></ol>
+          </section>
+          <section class="block markets-mini" id="marketsMini" aria-labelledby="mmTitle" hidden>
+            <div class="block-head"><h2 id="mmTitle">Markets</h2><a class="link" href="#markets">Open</a></div>
+            <div class="mm-row">
+              <div><div class="mm-eq num" id="mmEq">$0</div><div class="mm-sub"><span class="chip num" id="mmDay">+$0</span><span class="muted" id="mmPos"></span></div></div>
+              <canvas id="mmSpark" class="mm-spark" aria-hidden="true"></canvas>
+            </div>
+            <p class="mm-thought" id="mmThought"></p>
+          </section>
+        </div>
+        <section class="block" aria-labelledby="projTitle">
+          <div class="block-head"><h2 id="projTitle">All projects</h2><span class="muted" id="projCount"></span></div>
+          <div class="cards" id="cards"></div>
+        </section>
+      </section>
 
-    <section class="panel radar" aria-labelledby="radarTitle">
-      <div class="panel-head">
-        <h2 id="radarTitle">Signal radar</h2>
-        <span class="muted" id="regime"></span>
-      </div>
-      <div class="radar-body">
-        <canvas id="radarChart" role="img" aria-label="Quant scores for the top symbols"></canvas>
-        <ol class="ranks" id="ranks"></ol>
-      </div>
-    </section>
+      <!-- ============================================================ PROJECTS (list + workspace) -->
+      <section class="view" id="view-projects" aria-labelledby="pTitle">
+        <div class="ws">
+          <nav class="ws-list" aria-label="Projects" id="wsList"></nav>
+          <div class="ws-main" id="wsMain">
+            <div class="ws-head">
+              <div>
+                <p class="eyebrow num" id="pPath"></p>
+                <h1 id="pTitle">Pick a project</h1>
+                <p class="headline" id="pDesc"></p>
+                <div class="stack" id="pStack"></div>
+              </div>
+              <span class="state-pill" id="pState"></span>
+            </div>
+            <dl class="tiles small" id="pTiles"></dl>
+            <div class="commit" id="pCommit"></div>
+            <div class="quick" id="pQuick" aria-label="Ask about this project"></div>
+            <div class="ws-cols">
+              <section class="block" aria-labelledby="tTitle">
+                <div class="block-head"><h2 id="tTitle">Tasks</h2><span class="muted" id="tCount"></span></div>
+                <ul class="tasks" id="pTasks"></ul>
+                <form class="mini-form" id="taskForm"><label class="sr-only" for="taskIn">New task</label><input id="taskIn" name="task" autocomplete="off" placeholder="Add a task…" maxlength="300"><button class="btn" type="submit">Add</button></form>
+              </section>
+              <section class="block" aria-labelledby="nTitle">
+                <div class="block-head"><h2 id="nTitle">Notes</h2></div>
+                <ul class="notes" id="pNotes"></ul>
+                <form class="mini-form" id="noteForm"><label class="sr-only" for="noteIn">New note</label><input id="noteIn" name="note" autocomplete="off" placeholder="Remember something…" maxlength="500"><button class="btn" type="submit">Save</button></form>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section class="panel mind" aria-labelledby="mindTitle">
-      <div class="panel-head">
-        <h2 id="mindTitle">Live reasoning</h2>
-        <span class="muted" id="analystName"></span>
-      </div>
-      <div class="guards" id="guards" aria-label="Risk guardrails"></div>
-      <ol class="stream" id="stream" aria-live="off"></ol>
-    </section>
+      <!-- ============================================================ MARKETS -->
+      <section class="view" id="view-markets" aria-labelledby="mkTitle">
+        <div class="mk-bar">
+          <h1 id="mkTitle" class="sr-only">Markets</h1>
+          <span class="badge" id="modeBadge">MARKETS</span>
+          <div class="status" role="status" aria-live="polite">
+            <span class="pulse" id="statusPulse" aria-hidden="true"></span>
+            <span id="statusText">Markets module is off.</span>
+            <span class="status-meta" id="statusMeta"></span>
+          </div>
+          <div class="controls">
+            <button class="btn ghost" id="pauseBtn" type="button" disabled>Pause</button>
+            <button class="btn kill" id="killBtn" type="button" disabled aria-describedby="killHint">
+              <span class="kill-fill" aria-hidden="true"></span>
+              <span class="kill-label">Hold to Kill</span>
+            </button>
+            <span class="sr-only" id="killHint">Press and hold for one second to cancel all orders and close every position.</span>
+          </div>
+        </div>
+        <div class="grid" translate="no" id="mkGrid">
+          <section class="panel equity" aria-labelledby="eqTitle">
+            <div class="panel-head"><h2 id="eqTitle">Portfolio</h2><span class="muted" id="brokerName"></span></div>
+            <div class="eq-hero">
+              <div>
+                <div class="eq-value num" id="eqValue">$0.00</div>
+                <div class="eq-sub">
+                  <span class="chip num" id="eqTotal">+0.00%</span><span class="muted">since start</span>
+                  <span class="chip num" id="eqDay">+$0.00</span><span class="muted">today</span>
+                </div>
+              </div>
+              <dl class="kpis">
+                <div><dt>Cash</dt><dd class="num" id="kCash">$0</dd></div>
+                <div><dt>Invested</dt><dd class="num" id="kExposure">0%</dd></div>
+                <div><dt>Win rate</dt><dd class="num" id="kWin">n/a</dd></div>
+                <div><dt>Realized</dt><dd class="num" id="kRealized">$0</dd></div>
+              </dl>
+            </div>
+            <div class="chart-wrap"><canvas id="eqChart" aria-label="Equity curve" role="img"></canvas></div>
+          </section>
+          <section class="panel radar" aria-labelledby="radarTitle">
+            <div class="panel-head"><h2 id="radarTitle">Signal radar</h2><span class="muted" id="regime"></span></div>
+            <div class="radar-body"><canvas id="radarChart" role="img" aria-label="Quant scores for the top symbols"></canvas><ol class="ranks" id="ranks"></ol></div>
+          </section>
+          <section class="panel mind" aria-labelledby="mindTitle">
+            <div class="panel-head"><h2 id="mindTitle">Live reasoning</h2><span class="muted" id="analystName"></span></div>
+            <div class="guards" id="guards" aria-label="Risk guardrails"></div>
+            <ol class="stream" id="stream" aria-live="off"></ol>
+          </section>
+          <section class="panel positions" aria-labelledby="posTitle">
+            <div class="panel-head"><h2 id="posTitle">Positions</h2><span class="muted" id="posCount"></span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th scope="col">Symbol</th><th scope="col" class="r">Value</th><th scope="col" class="r">P&amp;L</th><th scope="col" class="ladder-h">Stop · price · target</th></tr></thead>
+                <tbody id="posBody"></tbody>
+              </table>
+              <p class="empty" id="posEmpty">No open positions. JARVIS is waiting for a setup that passes every guardrail.</p>
+            </div>
+          </section>
+          <section class="panel decision" aria-labelledby="decTitle">
+            <div class="panel-head"><h2 id="decTitle">Latest decision</h2><span class="muted" id="decTime"></span></div>
+            <div id="decBody" class="dec-body"><p class="empty">The first analyst review lands after the first scan.</p></div>
+          </section>
+          <section class="panel tape" aria-labelledby="tapeTitle">
+            <div class="panel-head"><h2 id="tapeTitle">Executions</h2><span class="muted" id="tapeCount"></span></div>
+            <ol class="trades" id="trades"></ol>
+          </section>
+        </div>
+        <div class="mk-off" id="mkOff" hidden>
+          <div class="reactor big" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h2>Markets module is off</h2>
+          <p>Add free Alpaca paper-trading keys to <code>.env</code> and JARVIS trades on its own, inside hard risk limits. Or run <code>jarvis demo</code> to watch it on a simulated market.</p>
+        </div>
+      </section>
+    </main>
 
-    <section class="panel positions" aria-labelledby="posTitle">
-      <div class="panel-head">
-        <h2 id="posTitle">Positions</h2>
-        <span class="muted" id="posCount"></span>
+    <!-- ============================================================ CONSOLE (Ask JARVIS) -->
+    <aside class="console" id="console" aria-labelledby="cTitle">
+      <div class="c-head">
+        <div class="c-title">
+          <div class="reactor sm" id="cReactor" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div><h2 id="cTitle">Ask JARVIS</h2><p class="c-ctx" id="cCtx">Anything. Any project.</p></div>
+        </div>
+        <div class="c-tools">
+          <button class="icon-btn" id="speakBtn" type="button" aria-pressed="false" title="Read answers aloud">Voice off</button>
+          <button class="icon-btn c-close" id="cClose" type="button" aria-label="Close">Close</button>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th scope="col">Symbol</th><th scope="col" class="r">Value</th><th scope="col" class="r">P&amp;L</th><th scope="col" class="ladder-h">Stop · price · target</th></tr>
-          </thead>
-          <tbody id="posBody"></tbody>
-        </table>
-        <p class="empty" id="posEmpty">No open positions. JARVIS is waiting for a setup that passes every guardrail.</p>
-      </div>
-    </section>
+      <ol class="msgs" id="msgs" aria-live="polite"></ol>
+      <div class="suggest" id="suggest"></div>
+      <form class="composer" id="composer">
+        <label class="sr-only" for="prompt">Message JARVIS</label>
+        <textarea id="prompt" name="prompt" rows="1" maxlength="4000" placeholder="Ask JARVIS anything…" autocomplete="off"></textarea>
+        <button class="mic" id="micBtn" type="button" aria-pressed="false" aria-label="Talk to JARVIS"><span class="mic-core" aria-hidden="true"></span></button>
+        <button class="send" id="sendBtn" type="submit" aria-label="Send">↑</button>
+      </form>
+    </aside>
+  </div>
 
-    <section class="panel decision" aria-labelledby="decTitle">
-      <div class="panel-head">
-        <h2 id="decTitle">Latest decision</h2>
-        <span class="muted" id="decTime"></span>
-      </div>
-      <div id="decBody" class="dec-body">
-        <p class="empty">The first analyst review lands after the first scan.</p>
-      </div>
-    </section>
-
-    <section class="panel tape" aria-labelledby="tapeTitle">
-      <div class="panel-head">
-        <h2 id="tapeTitle">Executions</h2>
-        <span class="muted" id="tapeCount"></span>
-      </div>
-      <ol class="trades" id="trades"></ol>
-    </section>
-  </main>
+  <nav class="dock" aria-label="Views">
+    <a href="#home" data-nav="home">Home</a>
+    <a href="#projects" data-nav="projects">Projects</a>
+    <a href="#ask" data-nav="ask" class="dock-ask"><span class="mic-core" aria-hidden="true"></span><span>Ask</span></a>
+    <a href="#markets" data-nav="markets">Markets</a>
+  </nav>
 
   <div class="gate" id="gate" hidden>
     <div class="gate-card">
       <div class="reactor big" aria-hidden="true"><span></span><span></span><span></span></div>
       <h1>Access key needed</h1>
-      <p>Open the dashboard with the link printed in your terminal. It carries a private key, so nobody else on your machine or network can drive JARVIS.</p>
+      <p>Open JARVIS with the link printed in your terminal. It carries a private key, so nobody else on your machine or network can drive it.</p>
       <code>jarvis demo</code>
     </div>
   </div>

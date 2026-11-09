@@ -1,7 +1,7 @@
-"""JARVIS - autonomous AI stock trading agent.
+"""JARVIS - open-source AI command center.
 
-Quant signals + an LLM analyst (Claude, Claude Code or a local Ollama model)
-+ a hard-coded risk engine, executing on Alpaca. Paper trading by default.
+Every project at a glance, any brain (Claude Code, Codex, Gemini, Ollama),
+voice, phone and calls, plus an autonomous trading desk on Alpaca.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

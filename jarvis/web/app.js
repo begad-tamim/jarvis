@@ -1,51 +1,61 @@
-// JARVIS HUD. Vanilla JS, no dependencies, no third-party requests.
+// JARVIS HUD core: auth, live stream, router, home, projects, console and voice.
+// Vanilla JS, no dependencies, no third-party requests.
 "use strict";
 
 const $ = (id) => document.getElementById(id);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const usd = (x, d = 2) => (x < 0 ? "-$" : "$") + Math.abs(x).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
-const sgnUsd = (x, d = 2) => (x >= 0 ? "+" : "") + usd(x, d);
-const pct = (x, d = 2) => (x >= 0 ? "+" : "") + (x * 100).toFixed(d) + "%";
 const hhmm = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 
 // ------------------------------------------------------------------ auth
 // The key arrives in the URL fragment (never sent to the server, never logged),
-// moves to sessionStorage, and is wiped from the address bar.
+// moves to localStorage on this device, and is wiped from the address bar.
 let TOKEN = "";
 (() => {
   const m = location.hash.match(/token=([\w-]+)/);
   if (m) {
     TOKEN = m[1];
-    try { sessionStorage.setItem("jarvis.token", TOKEN); } catch {}
-    history.replaceState(null, "", location.pathname);
+    store.set("jarvis.token", TOKEN);
+    history.replaceState(null, "", location.pathname + "#home");
   } else {
-    try { TOKEN = sessionStorage.getItem("jarvis.token") || ""; } catch {}
+    TOKEN = store.get("jarvis.token", "");
   }
 })();
 const api = (path, opts = {}) =>
   fetch(path, { ...opts, headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json", ...(opts.headers || {}) } });
+const post = (path, body) => api(path, { method: "POST", body: JSON.stringify(body || {}) });
 
 // ------------------------------------------------------------------ state
-let S = null;
-let pending = false;
-const seenThoughts = new Set();
-const seenTrades = new Set();
+const H = { hub: null, project: null, messages: [], busy: 0, speak: store.get("jarvis.speak", "0") === "1" };
+const STATE = {
+  attention: ["Needs attention", "attention"], active: ["In progress", "active"],
+  ready: ["Ready", "ready"], quiet: ["Quiet", "quiet"], unknown: ["Unknown", "quiet"],
+};
 
-function schedule(snap) {
-  S = snap;
-  if (pending) return;
-  pending = true;
-  requestAnimationFrame(() => { pending = false; render(); });
+async function loadHub() {
+  const r = await api("/api/hub");
+  if (r.status === 401) { $("gate").hidden = false; return; }
+  H.hub = await r.json();
+  H.messages = H.hub.messages || [];
+  H.busy = H.hub.busy;
+  renderChrome();
+  renderHome();
+  renderMessages(true);
+  if (H.hub.active && !H.project) loadProject(H.hub.active, false);
+  route();
 }
 
-// ------------------------------------------------------------------ stream (SSE over fetch, so the key stays in a header)
+// ------------------------------------------------------------------ live stream (SSE over fetch, so the key stays in a header)
 async function connect(attempt = 0) {
   if (!TOKEN) { $("gate").hidden = false; return; }
   try {
     const res = await api("/api/stream");
     if (res.status === 401) { $("gate").hidden = false; return; }
     if (!res.ok || !res.body) throw new Error(res.status);
+    setLink(true);
+    if (attempt) loadHub();
     attempt = 0;
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -63,359 +73,342 @@ async function connect(attempt = 0) {
           if (line.startsWith("event: ")) ev = line.slice(7);
           else if (line.startsWith("data: ")) data += line.slice(6);
         }
-        if (!data) continue;
-        const obj = JSON.parse(data);
-        if (ev === "snapshot") schedule(obj);
-        else if (ev === "thought" && S) { S.thoughts = [...(S.thoughts || []), obj].slice(-60); schedule(S); }
+        if (data) onEvent(ev, JSON.parse(data));
       }
     }
-  } catch (e) { /* fall through to reconnect */ }
-  setStatus("Reconnecting to the engine…", "bad");
+  } catch (e) { /* reconnect below */ }
+  setLink(false);
   setTimeout(() => connect(attempt + 1), Math.min(10000, 800 * 2 ** attempt));
 }
 
-function setStatus(text, cls) {
-  $("statusText").textContent = text;
-  $("statusPulse").className = "pulse " + (cls || "");
-}
-
-// ------------------------------------------------------------------ render
-function render() {
-  const s = S;
-  if (!s) return;
-  const a = s.account;
-
-  // header
-  const badge = $("modeBadge");
-  badge.className = "badge" + (s.mode === "demo" ? " demo" : s.live ? " live" : "");
-  const [b1, b2] = s.mode === "demo" ? ["DEMO", "SIMULATED"] : s.live ? ["LIVE", "REAL MONEY"] : ["PAPER", "TRADING"];
-  badge.innerHTML = `${b1}<span class="b2"> · ${b2}</span>`;
-  const statusWords = {
-    watching: "Watching the market", scanning: "Scanning the universe", thinking: "Analyst is reasoning",
-    paused: "Paused. Stops still protected", halted: "Halted: " + (s.halted || ""), "market closed": "Market closed. Standing by",
-  };
-  setStatus(s.killed ? "Kill switch engaged" : statusWords[s.status] || s.status, s.killed || s.status === "halted" ? "bad" : s.status === "market closed" || s.paused ? "" : "on");
-  $("statusMeta").textContent = `scan #${s.scans} · ${hhmm(s.t)}`;
-  const pause = $("pauseBtn");
-  pause.disabled = false;
-  pause.textContent = s.paused || s.killed ? "Resume" : "Pause";
-  $("killBtn").disabled = s.killed;
-  $("killBtn").querySelector(".kill-label").textContent = s.killed ? "Killed" : "Hold to Kill";
-
-  // equity
-  tween($("eqValue"), a.equity, (v) => usd(v));
-  setChip($("eqTotal"), a.total_return_pct, pct(a.total_return_pct));
-  setChip($("eqDay"), a.day_pl, sgnUsd(a.day_pl));
-  $("kCash").textContent = usd(a.cash, 0);
-  $("kExposure").textContent = (a.exposure_pct * 100).toFixed(0) + "%";
-  $("kWin").textContent = s.stats.win_rate == null ? "n/a" : (s.stats.win_rate * 100).toFixed(0) + "%";
-  const rz = $("kRealized");
-  rz.textContent = sgnUsd(s.stats.realized_pl, 0);
-  rz.className = "num " + (s.stats.realized_pl >= 0 ? "up" : "down");
-  $("brokerName").textContent = `${s.broker} · ${s.stats.closed} closed trades`;
-  drawEquity(s.equity, a.start_equity);
-
-  // radar
-  $("regime").textContent = s.regime === "unknown" ? "" : `regime ${s.regime}`;
-  RADAR.data = s.signals.slice(0, 8);
-  if (REDUCED) drawRadar(0);
-  renderRanks(s.signals.slice(0, 7));
-
-  // guardrails + thoughts
-  $("analystName").textContent = `analyst: ${s.analyst}`;
-  renderGuards(s);
-  renderThoughts(s.thoughts);
-
-  renderPositions(s.positions);
-  renderDecision(s);
-  renderTrades(s.trades);
-}
-
-function setChip(el, v, text) {
-  el.textContent = text;
-  el.className = "chip num " + (v > 0 ? "up" : v < 0 ? "down" : "");
-}
-
-const tweens = new WeakMap();
-function tween(el, to, fmt) {
-  const from = tweens.get(el)?.value ?? to;
-  if (REDUCED || from === to) { el.textContent = fmt(to); tweens.set(el, { value: to }); return; }
-  const t0 = performance.now(), dur = 700;
-  const st = { value: from };
-  tweens.set(el, st);
-  const step = (now) => {
-    const k = Math.min(1, (now - t0) / dur), e = 1 - (1 - k) ** 3;
-    st.value = from + (to - from) * e;
-    el.textContent = fmt(st.value);
-    if (k < 1 && tweens.get(el) === st) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
-
-// ------------------------------------------------------------------ canvas helpers
-function fit(canvas) {
-  const r = canvas.getBoundingClientRect();
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  return { ctx, w: r.width, h: r.height };
-}
-const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-function drawEquity(points, start) {
-  const { ctx, w, h } = fit($("eqChart"));
-  ctx.clearRect(0, 0, w, h);
-  if (!points || points.length < 2) return;
-  const ys = points.map((p) => p[1]);
-  let lo = Math.min(...ys, start ?? Infinity), hi = Math.max(...ys, start ?? -Infinity);
-  const pad = (hi - lo) * 0.12 || hi * 0.002 || 1;
-  lo -= pad; hi += pad;
-  const L = 0, R = w - 64, T = 8, B = h - 18;
-  const x = (i) => L + (i / (points.length - 1)) * (R - L);
-  const y = (v) => B - ((v - lo) / (hi - lo)) * (B - T);
-  const up = ys[ys.length - 1] >= (start ?? ys[0]);
-  const col = up ? css("--up") : css("--down");
-
-  // grid + labels
-  ctx.font = `11px ${css("--mono")}`;
-  ctx.fillStyle = css("--text-3");
-  ctx.strokeStyle = "rgba(120,220,255,0.07)";
-  ctx.lineWidth = 1;
-  for (let k = 0; k <= 3; k++) {
-    const v = lo + ((hi - lo) * k) / 3, yy = y(v);
-    ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(R, yy); ctx.stroke();
-    ctx.fillText(usd(v, 0), R + 8, yy + 4);
+function onEvent(ev, d) {
+  if (ev === "snapshot") return window.Markets?.update(d);
+  if (ev === "thought") return window.Markets?.thought(d);
+  if (ev === "message") {
+    if (!H.messages.some((m) => m.id === d.id)) { H.messages.push(d); renderMessages(); }
+    if (d.role === "jarvis") onReply(d);
+    return;
   }
-  if (start) { // start-equity baseline
-    ctx.setLineDash([4, 5]);
-    ctx.strokeStyle = "rgba(230,238,245,0.25)";
-    ctx.beginPath(); ctx.moveTo(L, y(start)); ctx.lineTo(R, y(start)); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  // area
-  const grad = ctx.createLinearGradient(0, T, 0, B);
-  grad.addColorStop(0, up ? "rgba(61,220,151,0.28)" : "rgba(255,92,108,0.25)");
-  grad.addColorStop(1, "rgba(6,9,13,0)");
-  ctx.beginPath();
-  points.forEach((p, i) => (i ? ctx.lineTo(x(i), y(p[1])) : ctx.moveTo(x(i), y(p[1]))));
-  ctx.lineTo(R, B); ctx.lineTo(L, B); ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
-  // line
-  ctx.beginPath();
-  points.forEach((p, i) => (i ? ctx.lineTo(x(i), y(p[1])) : ctx.moveTo(x(i), y(p[1]))));
-  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
-  // head
-  const hx = x(points.length - 1), hy = y(ys[ys.length - 1]);
-  ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 14;
-  ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.shadowBlur = 0;
-  // time labels
-  ctx.fillStyle = css("--text-3");
-  ctx.fillText(hhmm(points[0][0]), L, h - 2);
-  const lbl = hhmm(points[points.length - 1][0]);
-  ctx.fillText(lbl, R - ctx.measureText(lbl).width, h - 2);
+  if (ev === "busy") { H.busy = d.busy; renderBusy(); return; }
+  if ((ev === "notes" || ev === "tasks") && H.project?.id === d.project) { H.project[ev] = d[ev]; renderProject(); return; }
+  if (ev === "active") { if (H.hub) H.hub.active = d.project; renderContext(); }
 }
 
-// Radar: each spoke is a symbol, radius is its quant score. The sweep shows a live scan.
-const RADAR = { data: [], angle: 0 };
-function drawRadar(sweep) {
-  const { ctx, w, h } = fit($("radarChart"));
-  ctx.clearRect(0, 0, w, h);
-  const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 34;
-  const accent = css("--accent");
-  ctx.strokeStyle = "rgba(120,220,255,0.12)";
-  ctx.lineWidth = 1;
-  for (const f of [0.25, 0.5, 0.75, 1]) { ctx.beginPath(); ctx.arc(cx, cy, R * f, 0, Math.PI * 2); ctx.stroke(); }
-  const d = RADAR.data, n = Math.max(d.length, 3);
-  const ang = (i) => -Math.PI / 2 + (i / n) * Math.PI * 2;
-  for (let i = 0; i < n; i++) {
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang(i)) * R, cy + Math.sin(ang(i)) * R); ctx.stroke();
-  }
-  // buy threshold ring
-  ctx.setLineDash([3, 4]);
-  ctx.strokeStyle = "rgba(61,220,151,0.45)";
-  ctx.beginPath(); ctx.arc(cx, cy, R * ((45 + 100) / 200), 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]);
-  if (!REDUCED) { // sweep
-    const g = ctx.createConicGradient ? ctx.createConicGradient(sweep - Math.PI / 2.2, cx, cy) : null;
-    if (g) {
-      g.addColorStop(0, "rgba(95,216,245,0)");
-      g.addColorStop(0.07, "rgba(95,216,245,0.16)");
-      g.addColorStop(0.0701, "rgba(95,216,245,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-  if (!d.length) return;
-  const pt = (i) => { const r = R * Math.max(0.04, (d[i].score + 100) / 200); return [cx + Math.cos(ang(i)) * r, cy + Math.sin(ang(i)) * r]; };
-  ctx.beginPath();
-  d.forEach((_, i) => { const [px, py] = pt(i); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
-  ctx.closePath();
-  ctx.fillStyle = "rgba(95,216,245,0.12)"; ctx.fill();
-  ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.font = `600 11px ${css("--mono")}`;
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  d.forEach((s, i) => {
-    const [px, py] = pt(i);
-    const c = s.action === "buy" ? css("--up") : s.action === "sell" ? css("--down") : accent;
-    ctx.fillStyle = c;
-    if (s.action === "buy") { ctx.shadowColor = c; ctx.shadowBlur = 12; }
-    ctx.beginPath(); ctx.arc(px, py, s.action === "buy" ? 4.5 : 3, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = s.action === "buy" ? css("--up") : css("--text-2");
-    ctx.fillText(s.symbol, cx + Math.cos(ang(i)) * (R + 15), cy + Math.sin(ang(i)) * (R + 13));
-  });
-}
-if (!REDUCED) {
-  let last = 0;
-  const loop = (now) => {
-    if (!document.hidden && now - last > 33) { // ~30fps is plenty for a sweep
-      RADAR.angle = (RADAR.angle + 0.035) % (Math.PI * 2);
-      drawRadar(RADAR.angle);
-      last = now;
-    }
-    requestAnimationFrame(loop);
-  };
-  requestAnimationFrame(loop);
+function setLink(ok) {
+  $("linkPulse").className = "pulse " + (ok ? "on" : "bad");
+  $("linkText").textContent = ok ? "Connected" : "Reconnecting";
 }
 
+// ------------------------------------------------------------------ router
+const VIEWS = ["home", "projects", "markets", "ask"];
+function route() {
+  let v = (location.hash.slice(1) || "home").split("/")[0];
+  if (!VIEWS.includes(v)) v = "home";
+  if (v === "ask" && matchMedia("(min-width: 1081px)").matches) { openConsole(true); v = document.body.dataset.view === "ask" ? "home" : document.body.dataset.view || "home"; }
+  document.body.dataset.view = v;
+  if (matchMedia("(max-width: 1080px)").matches && v !== "ask") openConsole(false);
+  document.querySelectorAll("[data-nav]").forEach((a) => a.setAttribute("aria-current", a.dataset.nav === v ? "page" : "false"));
+  const sub = location.hash.split("/")[1];
+  if (v === "projects" && sub && sub !== H.project?.id) loadProject(sub, true);
+  if (v === "projects" && !sub && !H.project && H.hub?.projects?.length) loadProject(H.hub.projects[0].id, false);
+  if (v === "markets") requestAnimationFrame(() => window.Markets?.redraw());
+  if (v === "ask") setTimeout(() => $("prompt").focus(), 50);
+  renderContext();
+}
+window.addEventListener("hashchange", route);
 
-// Styles go through the CSSOM (allowed by our strict CSP), never style="" attributes.
-function hydrate(root) {
-  root.querySelectorAll("[data-sx]").forEach((el) => { el.style.transform = `scaleX(${el.dataset.sx})`; });
-  root.querySelectorAll("[data-left]").forEach((el) => { el.style.left = el.dataset.left + "%"; });
-  root.querySelectorAll("[data-p]").forEach((el) => { el.style.setProperty("--p", el.dataset.p); });
-  root.querySelectorAll('[data-still="1"]').forEach((el) => { el.style.animation = "none"; });
-  return root;
+// ------------------------------------------------------------------ chrome
+function renderChrome() {
+  const h = H.hub;
+  $("brainName").textContent = h.brain.label;
+  $("demoBadge").hidden = !h.demo;
+  document.body.classList.toggle("no-markets", !h.markets);
+  $("mkOff").hidden = h.markets;
+  $("mkGrid").hidden = !h.markets;
+  if (!h.markets) $("killBtn").disabled = $("pauseBtn").disabled = true;
+  $("speakBtn").setAttribute("aria-pressed", String(H.speak));
+  $("speakBtn").textContent = H.speak ? "Voice on" : "Voice off";
 }
 
-// ------------------------------------------------------------------ lists
-function renderRanks(sigs) {
-  const max = 100;
-  $("ranks").innerHTML = sigs.map((s) => `
-    <li class="${s.action}">
-      <span class="sym">${esc(s.symbol)}</span>
-      <span class="bar ${s.score < 0 ? "neg" : ""}" data-sx="${Math.max(0.02, Math.abs(s.score) / max)}"></span>
-      <span class="sc">${s.score > 0 ? "+" : ""}${s.score.toFixed(0)}</span>
-    </li>`).join(""); hydrate($("ranks"));
+function greeting() {
+  const hr = new Date().getHours();
+  return hr < 5 ? "Working late." : hr < 12 ? "Good morning." : hr < 18 ? "Good afternoon." : "Good evening.";
 }
 
-function renderGuards(s) {
-  const a = s.account, r = s.risk;
-  const rows = [
-    ["Daily loss", Math.max(0, -a.day_pl_pct) / r.daily_loss_limit, `${(Math.max(0, -a.day_pl_pct) * 100).toFixed(1)}/${(r.daily_loss_limit * 100).toFixed(0)}%`],
-    ["Drawdown", a.drawdown_pct / r.max_drawdown, `${(a.drawdown_pct * 100).toFixed(1)}/${(r.max_drawdown * 100).toFixed(0)}%`],
-    ["Invested", a.exposure_pct / 0.95, `${(a.exposure_pct * 100).toFixed(0)}%`],
-    ["Positions", s.positions.length / r.max_positions, `${s.positions.length}/${r.max_positions}`],
-    ["Entries today", r.trades_today / r.max_trades, `${r.trades_today}/${r.max_trades}`],
-    ["Risk per trade", r.risk_per_trade / 0.05, `${(r.risk_per_trade * 100).toFixed(1)}%`],
+// ------------------------------------------------------------------ home
+function renderHome() {
+  const h = H.hub, b = h.briefing;
+  $("today").textContent = new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
+  $("hello").textContent = greeting();
+  $("headline").textContent = b.headline;
+  const attention = b.buckets.attention?.length || 0;
+  const tiles = [
+    ["Projects", b.projects, ""],
+    ["Need attention", attention, attention ? "warn" : ""],
+    ["Commits this week", b.commits_7d, ""],
+    ["Open tasks", b.tasks_open, ""],
   ];
-  $("guards").innerHTML = rows.map(([k, f, v]) => {
-    const cls = f >= 1 ? "max" : f >= 0.7 ? "hot" : "";
-    return `<div class="guard">${k}<b>${v}</b><div class="meter"><i class="${cls}" data-sx="${Math.min(1, Math.max(0, f))}"></i></div></div>`;
-  }).join("");
-  hydrate($("guards"));
+  if (b.markets) tiles.push(["Portfolio today", (b.markets.day_pnl >= 0 ? "+" : "-") + usd(Math.abs(b.markets.day_pnl), 0), b.markets.day_pnl >= 0 ? "up" : "down"]);
+  $("tiles").innerHTML = tiles.map(([k, v, c]) => `<div class="tile ${c}"><dt>${k}</dt><dd class="num">${esc(v)}</dd></div>`).join("");
+
+  const focus = [...(b.buckets.attention || []), ...(b.buckets.active || [])].slice(0, 5);
+  $("focusCount").textContent = focus.length ? `${focus.length} items` : "";
+  $("focus").innerHTML = focus.map((f) => {
+    const st = h.projects.find((p) => p.id === f.id)?.status.state || "active";
+    return `<li><a href="#projects/${esc(f.id)}" class="focus-row"><span class="dot ${STATE[st][1]}"></span><span class="f-name">${esc(f.name)}</span><span class="f-why">${esc(f.reason)}</span><span class="f-go" aria-hidden="true">→</span></a></li>`;
+  }).join("") || `<li class="empty">Nothing needs you right now. Everything is committed and in sync.</li>`;
+
+  $("projCount").textContent = `${h.projects.length} found`;
+  $("cards").innerHTML = h.projects.map((p) => {
+    const st = p.status, [label, cls] = STATE[st.state] || STATE.unknown;
+    return `<a class="card" href="#projects/${esc(p.id)}">
+      <div class="card-top"><span class="card-name">${esc(p.name)}</span><span class="state-pill ${cls}">${label}</span></div>
+      <p class="card-desc">${esc(p.description || "No README description yet.")}</p>
+      <p class="card-why">${esc(st.reason)}</p>
+      <div class="card-meta num"><span>${esc(st.branch || "-")}</span><span>${esc(p.last_commit_ago)}</span><span>${st.todos} TODO</span></div>
+      <div class="stack">${p.stack.map((s) => `<span>${esc(s)}</span>`).join("")}</div>
+    </a>`;
+  }).join("") || `<p class="empty">No projects found. Add folders to <code>project_roots</code> in jarvis.toml.</p>`;
+  $("marketsMini").hidden = !h.markets;
+  $("marketsTab").hidden = false;
+  renderWsList();
 }
 
-function renderThoughts(list) {
-  const ol = $("stream");
-  const items = (list || []).slice(-40).reverse();
-  const html = items.map((t) => {
-    const key = t.t + t.text;
-    const fresh = !seenThoughts.has(key);
-    seenThoughts.add(key);
-    return `<li class="k-${esc(t.kind)}" data-still="${fresh ? 0 : 1}"><time>${hhmm(t.t)}</time>${t.symbol ? `<span class="tag">${esc(t.symbol)}</span>` : ""}${esc(t.text)}</li>`;
+window.JARVIS = {
+  marketsMini(s) {
+    if (!s || $("marketsMini").hidden) return;
+    const a = s.account;
+    $("mmEq").textContent = usd(a.equity, 0);
+    const day = $("mmDay");
+    day.textContent = (a.day_pl >= 0 ? "+" : "-") + usd(Math.abs(a.day_pl), 0) + " today";
+    day.className = "chip num " + (a.day_pl > 0 ? "up" : a.day_pl < 0 ? "down" : "");
+    $("mmPos").textContent = `${s.positions.length} positions · ${s.status}`;
+    const t = [...(s.thoughts || [])].reverse().find((x) => x.kind !== "scan");
+    $("mmThought").textContent = t ? (t.symbol ? t.symbol + " · " : "") + t.text : "";
+    if (document.body.dataset.view === "home") spark($("mmSpark"), s.equity, a.start_equity);
+  },
+};
+
+function spark(canvas, pts, start) {
+  if (!pts || pts.length < 2) return;
+  const { ctx, w, h } = fit(canvas);
+  ctx.clearRect(0, 0, w, h);
+  const ys = pts.map((p) => p[1]);
+  const lo = Math.min(...ys, start), hi = Math.max(...ys, start), pad = (hi - lo) * 0.1 || 1;
+  const x = (i) => (i / (pts.length - 1)) * w, y = (v) => h - ((v - lo + pad) / (hi - lo + 2 * pad)) * h;
+  const col = ys[ys.length - 1] >= start ? css("--up") : css("--down");
+  ctx.beginPath();
+  ys.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(0, y(v))));
+  ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.stroke();
+}
+
+// ------------------------------------------------------------------ projects
+function renderWsList() {
+  const h = H.hub;
+  if (!h) return;
+  $("wsList").innerHTML = h.projects.map((p) => {
+    const cls = (STATE[p.status.state] || STATE.unknown)[1];
+    return `<a href="#projects/${esc(p.id)}" class="ws-item ${H.project?.id === p.id ? "on" : ""}"><span class="dot ${cls}"></span><span>${esc(p.name)}</span><span class="muted num">${esc(p.last_commit_ago)}</span></a>`;
   }).join("");
-  if (ol.dataset.h !== String(items.length) + (items[0]?.text || "")) {
-    ol.innerHTML = html;
-    hydrate(ol);
-    ol.dataset.h = String(items.length) + (items[0]?.text || "");
+}
+
+async function loadProject(id, activate) {
+  const r = await api(`/api/project?id=${encodeURIComponent(id)}`);
+  if (!r.ok) return;
+  H.project = await r.json();
+  if (activate) post("/api/active", { project: id });
+  if (H.hub) H.hub.active = id;
+  renderProject();
+  renderWsList();
+  renderContext();
+}
+
+function renderProject() {
+  const p = H.project;
+  if (!p) return;
+  const st = p.status, [label, cls] = STATE[st.state] || STATE.unknown;
+  $("pPath").textContent = p.path.replace(/^\/(Users|home)\/[^/]+/, "~");
+  $("pTitle").textContent = p.name;
+  $("pDesc").textContent = p.description || "";
+  $("pStack").innerHTML = p.stack.map((s) => `<span>${esc(s)}</span>`).join("");
+  $("pState").className = "state-pill big " + cls;
+  $("pState").textContent = label;
+  $("pTiles").innerHTML = [
+    ["Uncommitted", st.dirty + st.untracked, st.dirty + st.untracked >= 8 ? "warn" : ""],
+    ["Ahead / behind", `${st.ahead} / ${st.behind}`, st.behind ? "warn" : ""],
+    ["Commits (7d)", st.commits_7d, ""],
+    ["TODOs in code", st.todos, ""],
+  ].map(([k, v, c]) => `<div class="tile ${c}"><dt>${k}</dt><dd class="num">${esc(v)}</dd></div>`).join("");
+  $("pCommit").innerHTML = `<span class="muted">Last commit · ${esc(p.last_commit_ago)} · ${esc(st.branch)}</span><b>${esc(st.last_commit || "No commits yet")}</b><span class="c-why">${esc(st.reason)}</span>`;
+  const quick = ["What's left before I can ship this?", "Summarize the latest changes", "Find the riskiest code", "Draft release notes"];
+  $("pQuick").innerHTML = quick.map((q) => `<button type="button" class="qchip" data-q="${esc(q)}">${esc(q)}</button>`).join("");
+  const open = p.tasks.filter((t) => !t.done).length;
+  $("tCount").textContent = p.tasks.length ? `${open} open` : "";
+  $("pTasks").innerHTML = p.tasks.map((t) => `<li><label><input type="checkbox" data-task="${esc(t.id)}" ${t.done ? "checked" : ""}><span>${esc(t.text)}</span></label></li>`).join("") || `<li class="empty">No tasks yet.</li>`;
+  $("pNotes").innerHTML = p.notes.map((n) => `<li><span>${esc(n.text)}</span><time class="muted num">${new Date(n.t * 1000).toLocaleDateString([], { month: "short", day: "numeric" })}</time></li>`).join("") || `<li class="empty">Say “remember …” and it lands here.</li>`;
+}
+
+$("pQuick").addEventListener("click", (e) => { const b = e.target.closest("[data-q]"); if (b) send(b.dataset.q); });
+$("pTasks").addEventListener("change", (e) => { const id = e.target.dataset.task; if (id && H.project) post("/api/task/toggle", { project: H.project.id, id }); });
+$("taskForm").addEventListener("submit", (e) => { e.preventDefault(); const v = $("taskIn").value.trim(); if (v && H.project) { post("/api/task", { project: H.project.id, text: v }); $("taskIn").value = ""; } });
+$("noteForm").addEventListener("submit", (e) => { e.preventDefault(); const v = $("noteIn").value.trim(); if (v && H.project) { post("/api/note", { project: H.project.id, text: v }); $("noteIn").value = ""; } });
+
+// ------------------------------------------------------------------ console
+function md(text) { // tiny, safe markdown: escape first, then format
+  const lines = esc(text).split("\n");
+  let html = "", list = null;
+  const inline = (s) => s.replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  for (const raw of lines) {
+    const l = raw.trimEnd();
+    const bullet = l.match(/^\s*(?:[-•*]|\d+\.)\s+(.*)$/);
+    if (bullet) { if (!list) { html += "<ul>"; list = true; } html += `<li>${inline(bullet[1])}</li>`; continue; }
+    if (list) { html += "</ul>"; list = null; }
+    if (!l.trim()) continue;
+    const head = l.match(/^#{1,4}\s+(.*)$/);
+    html += head ? `<p class="h">${inline(head[1])}</p>` : `<p>${inline(l)}</p>`;
+  }
+  return html + (list ? "</ul>" : "");
+}
+
+function visibleMessages() {
+  return H.messages.slice(-80);
+}
+
+function renderMessages(jump) {
+  const ol = $("msgs");
+  const list = visibleMessages();
+  const nearBottom = ol.scrollHeight - ol.scrollTop - ol.clientHeight < 120;
+  const brain = H.hub?.brain?.label || "your model";
+  const welcome = `<li class="welcome"><div class="reactor big" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h3>Hello. I'm JARVIS.</h3><p>I know every project you have, read the code with <b>${esc(brain)}</b>, and watch your markets. Type, or tap the mic and talk.</p>
+    <div class="caps"><span><b>Projects</b>"open orbit-api"</span><span><b>Brief</b>"brief me"</span><span><b>Memory</b>"remember …"</span><span><b>Phone</b>"call me"</span></div></li>`;
+  ol.innerHTML = (list.length ? "" : welcome) + list.map((m) => {
+    const proj = m.project && H.hub ? H.hub.projects.find((p) => p.id === m.project)?.name : "";
+    const meta = m.role === "jarvis"
+      ? `${esc(m.brain || "JARVIS")}${m.ms ? ` · ${(m.ms / 1000).toFixed(1)}s` : ""}${proj ? ` · ${esc(proj)}` : ""}`
+      : `${esc(m.source === "hud" ? "you" : `you · ${m.source}`)}`;
+    return `<li class="msg ${m.role}${m.action?.error ? " err" : ""}"><div class="bubble">${m.role === "jarvis" ? md(m.text) : `<p>${esc(m.text)}</p>`}</div><div class="meta num">${meta} · ${hhmm(m.t)}</div></li>`;
+  }).join("") + (H.busy ? `<li class="msg jarvis thinking"><div class="bubble"><span class="dots"><i></i><i></i><i></i></span> Thinking…</div></li>` : "");
+  $("suggest").hidden = list.length > 0;
+  if (jump || nearBottom) ol.scrollTop = ol.scrollHeight;
+}
+
+function renderBusy() {
+  $("cReactor").classList.toggle("busy", H.busy > 0);
+  renderMessages();
+}
+
+function renderContext() {
+  const pid = H.hub?.active;
+  const p = pid && H.hub.projects.find((x) => x.id === pid);
+  $("cCtx").innerHTML = p ? `Working in <b>${esc(p.name)}</b>` : "Anything. Any project.";
+  const sug = [["Brief me", "brief me"], ["What should I focus on today?", "What should I focus on today?"], [p ? `Status of ${p.name}` : "Open orbit-api", p ? `status of ${p.id}` : "open orbit-api"], ["How are the markets?", "markets"]];
+  if (!H.hub?.markets) sug.pop();
+  $("suggest").innerHTML = sug.map(([l, q]) => `<button type="button" class="qchip" data-q="${esc(q)}">${esc(l)}</button>`).join("");
+}
+$("suggest").addEventListener("click", (e) => { const b = e.target.closest("[data-q]"); if (b) send(b.dataset.q); });
+
+let lastSource = "hud";
+async function send(text, source) {
+  text = (text || "").trim();
+  if (!text) return;
+  lastSource = source || (matchMedia("(max-width: 760px)").matches ? "phone" : "hud");
+  if (matchMedia("(max-width: 760px)").matches) { if (document.body.dataset.view !== "ask") location.hash = "#ask"; }
+  else openConsole(true);
+  $("prompt").value = "";
+  autosize();
+  const project = H.hub?.active || null;
+  try {
+    const r = await post("/api/ask", { text, project, source: lastSource });
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+  } catch (e) {
+    H.messages.push({ id: "e" + Date.now(), role: "jarvis", text: `Couldn't reach JARVIS: ${e.message}`, t: Date.now() / 1000, action: { error: true } });
+    renderMessages(true);
   }
 }
 
-function renderPositions(pos) {
-  $("posCount").textContent = pos.length ? `${pos.length} open` : "";
-  $("posEmpty").hidden = pos.length > 0;
-  $("posBody").innerHTML = pos.map((p) => {
-    const lo = p.stop ?? p.price * 0.95, hi = p.target ?? p.price * 1.08;
-    const f = Math.min(1, Math.max(0, (p.price - lo) / (hi - lo || 1)));
-    return `<tr>
-      <td><span class="sym">${esc(p.symbol)}</span><span class="sub">${p.qty} @ ${usd(p.avg)}</span></td>
-      <td class="r num">${usd(p.value, 0)}</td>
-      <td class="r num ${p.pl >= 0 ? "up" : "down"}">${pct(p.plpc, 1)}<span class="sub">${sgnUsd(p.pl, 0)}</span></td>
-      <td><div class="ladder" title="stop ${p.stop ?? "n/a"} · price ${p.price} · target ${p.target ?? "n/a"}">
-        <span class="lo">${p.stop ? usd(p.stop, 0) : ""}</span><span class="hi">${p.target ? usd(p.target, 0) : "trailing"}</span>
-        <span class="rail"></span><span class="dot" data-left="${(f * 100).toFixed(1)}"></span></div></td>
-    </tr>`;
-  }).join("");
-  hydrate($("posBody"));
+function onReply(m) {
+  const a = m.action || {};
+  if (a.view === "project" && a.project) { location.hash = `#projects/${a.project}`; }
+  else if (a.view === "markets") { location.hash = "#markets"; }
+  else if (a.view === "home") { loadHub(); }
+  if (H.speak || lastSource === "voice") speak(m.text);
+  if (["notes", "tasks"].some((k) => /Noted|Added to/.test(m.text)) && H.project) loadProject(H.project.id, false);
 }
 
-function renderDecision(s) {
-  // Most recent decision that says something (skip routine cooldown/duplicate vetoes).
-  const routine = new Set(["cooldown", "duplicate"]);
-  const dec = [...s.decisions].reverse().find((d) => d.thesis && !routine.has(d.verdict.rule)) || null;
-  const th = dec?.thesis || s.theses.find((t) => t.action === "buy" || t.action === "sell") || s.theses[0];
-  if (!th) return;
-  const v = dec?.verdict;
-  $("decTime").textContent = dec ? hhmm(dec.t) : "";
-  const conv = Math.round(th.conviction * 100);
-  $("decBody").innerHTML = `
-    <div class="dec-top">
-      <div class="ring" data-p="${conv}"><span>${conv}</span></div>
-      <div>
-        <div><span class="dec-sym">${esc(th.symbol)}</span><span class="dec-act ${th.action === "buy" ? "buy" : th.action === "sell" ? "sell" : "pass"}">${esc(th.action.toUpperCase())}</span></div>
-        <div class="dec-src">conviction ${conv}% · ${esc(th.source)}</div>
-      </div>
-    </div>
-    <p class="dec-thesis">${esc(th.thesis)}</p>
-    ${th.risks?.length ? `<ul class="dec-risks">${th.risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
-    ${v ? `<div class="verdict ${v.approved ? "ok" : "no"}"><b>${v.approved ? "RISK APPROVED" : "RISK VETO"}</b><span>${esc(v.approved ? `stop ${usd(v.stop)} · target ${v.target ? usd(v.target) : "trailing"}` : v.message)}</span>${v.approved ? `<span class="num">${usd(v.notional, 0)}</span>` : ""}</div>` : ""}`;
-  hydrate($("decBody"));
-}
+$("composer").addEventListener("submit", (e) => { e.preventDefault(); send($("prompt").value); });
+$("prompt").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send($("prompt").value); } });
+function autosize() { const t = $("prompt"); t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
+$("prompt").addEventListener("input", autosize);
 
-function renderTrades(trades) {
-  $("tapeCount").textContent = trades.length ? `${trades.length} recent` : "";
-  $("trades").innerHTML = trades.slice(0, 30).map((t) => {
-    const key = t.t + t.symbol + t.side;
-    const fresh = !seenTrades.has(key);
-    seenTrades.add(key);
-    const amt = t.side === "sell" && t.pnl != null
-      ? `<span class="amt ${t.pnl >= 0 ? "up" : "down"}">${sgnUsd(t.pnl, 0)}</span>`
-      : `<span class="amt">${usd(t.notional, 0)}</span>`;
-    return `<li data-still="${fresh ? 0 : 1}"><span class="side ${t.side}">${t.side.toUpperCase()}</span><span class="sym">${esc(t.symbol)}</span><span class="why" title="${esc(t.reason)}">${esc(t.reason)}</span>${amt}</li>`;
-  }).join("") || `<li class="empty none">No executions yet.</li>`;
-  hydrate($("trades"));
+function openConsole(on) {
+  document.body.classList.toggle("console-open", on);
+  $("askToggle").setAttribute("aria-expanded", String(on));
 }
-
-// ------------------------------------------------------------------ controls
-$("pauseBtn").addEventListener("click", async () => {
-  if (!S) return;
-  await api(S.paused || S.killed ? "/api/resume" : "/api/pause", { method: "POST", body: "{}" });
+$("askToggle").addEventListener("click", () => { const on = !document.body.classList.contains("console-open"); openConsole(on); if (on) $("prompt").focus(); });
+$("cClose").addEventListener("click", () => { openConsole(false); if (document.body.dataset.view === "ask") location.hash = "#home"; });
+document.addEventListener("keydown", (e) => {
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement?.tagName);
+  if (e.key === "/" && !typing) { e.preventDefault(); openConsole(true); $("prompt").focus(); }
+  if (e.key === "Escape" && document.body.classList.contains("console-open") && document.body.dataset.view !== "home" && document.body.dataset.view !== "projects") openConsole(false);
 });
 
-(() => { // press-and-hold kill switch: impossible to trigger by a stray click
-  const btn = $("killBtn");
-  let timer = null;
-  const start = (e) => {
-    if (btn.disabled) return;
-    e.preventDefault();
-    btn.classList.add("holding");
-    timer = setTimeout(async () => {
-      btn.classList.remove("holding");
-      btn.classList.add("armed");
-      await api("/api/kill", { method: "POST", body: JSON.stringify({ reason: "kill switch pressed on the dashboard", liquidate: true }) });
-      setTimeout(() => btn.classList.remove("armed"), 1500);
-    }, 1000);
+// ------------------------------------------------------------------ voice: talk to JARVIS, hear it answer
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+$("micBtn").addEventListener("click", () => {
+  if (!Rec) { $("prompt").placeholder = "Voice input needs Chrome, Edge or Safari over HTTPS / localhost."; return; }
+  if (rec) { rec.stop(); return; }
+  rec = new Rec();
+  rec.lang = navigator.language || "en-US";
+  rec.interimResults = true;
+  rec.continuous = false;
+  let final = "";
+  $("micBtn").setAttribute("aria-pressed", "true");
+  document.body.classList.add("listening");
+  rec.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+    }
+    $("prompt").value = final + interim;
+    autosize();
   };
-  const cancel = () => { clearTimeout(timer); btn.classList.remove("holding"); };
-  btn.addEventListener("pointerdown", start);
-  btn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) start(e); });
-  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => btn.addEventListener(ev, cancel));
-  btn.addEventListener("keyup", cancel);
-})();
+  rec.onend = () => {
+    $("micBtn").setAttribute("aria-pressed", "false");
+    document.body.classList.remove("listening");
+    rec = null;
+    if (final.trim()) send(final, "voice");
+  };
+  rec.onerror = () => {};
+  try { speechSynthesis.cancel(); } catch {}
+  rec.start();
+});
 
-window.addEventListener("resize", () => S && schedule(S));
+let voice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find((v) => /Daniel|Arthur|Oliver|George/.test(v.name) && /en-GB/.test(v.lang)) || vs.find((v) => /en-GB/.test(v.lang)) || vs.find((v) => /^en/.test(v.lang)) || null;
+}
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  const clean = text.replace(/[`*#>_]/g, "").replace(/\n+/g, ". ").slice(0, 900);
+  const u = new SpeechSynthesisUtterance(clean);
+  if (voice) u.voice = voice;
+  u.rate = 1.04; u.pitch = 0.95;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+$("speakBtn").addEventListener("click", () => {
+  H.speak = !H.speak;
+  store.set("jarvis.speak", H.speak ? "1" : "0");
+  renderChrome();
+  if (!H.speak) try { speechSynthesis.cancel(); } catch {}
+});
+
+// ------------------------------------------------------------------ boot
+setInterval(() => { if (!document.hidden && document.body.dataset.view === "home") loadHub(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && H.hub) loadHub(); });
+loadHub();
 connect();

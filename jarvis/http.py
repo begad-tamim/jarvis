@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-USER_AGENT = "jarvis-trading-agent/1.0 (+https://github.com/begad-tamim/jarvis-trading-agent)"
+USER_AGENT = "jarvis/2.0 (+https://github.com/begad-tamim/jarvis)"
 
 
 class HTTPError(RuntimeError):
@@ -26,6 +26,7 @@ def request_json(
     headers: dict[str, str] | None = None,
     params: dict[str, Any] | None = None,
     body: Any = None,
+    form: dict[str, Any] | None = None,
     timeout: float = 15.0,
     retries: int = 3,
 ) -> Any:
@@ -40,6 +41,9 @@ def request_json(
     hdrs = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     if data is not None:
         hdrs["Content-Type"] = "application/json"
+    if form is not None:
+        data = urllib.parse.urlencode(form).encode()
+        hdrs["Content-Type"] = "application/x-www-form-urlencoded"
     hdrs.update(headers or {})
     last_exc: Exception | None = None
     for attempt in range(retries + 1):

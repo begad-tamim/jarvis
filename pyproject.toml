@@ -3,16 +3,16 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jarvis-trading-agent"
-version = "1.0.0"
-description = "JARVIS: an autonomous AI stock trading agent. Claude / LLM analyst + quant signals + hard-coded risk guardrails, trading on Alpaca. Paper by default, zero dependencies, live HUD dashboard."
+name = "jarvis-os"
+version = "2.0.0"
+description = "JARVIS: open-source AI command center for developers. Every project at a glance, ask anything with Claude Code / Codex / Gemini / Ollama, voice, phone calls, and an autonomous trading desk. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "Begad Tamim" }]
 keywords = [
-  "jarvis", "trading-bot", "ai-trading", "algorithmic-trading", "alpaca", "claude", "anthropic", "llm",
-  "ai-agent", "autonomous-agent", "stock-market", "paper-trading", "backtesting", "quant", "ollama",
+  "jarvis", "ai-assistant", "personal-assistant", "ai-agent", "claude-code", "codex", "gemini-cli", "ollama",
+  "voice-assistant", "developer-tools", "productivity", "llm", "autonomous-agent", "trading-bot", "alpaca",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -24,6 +24,8 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Office/Business :: Financial :: Investment",
+  "Topic :: Software Development",
+  "Environment :: Web Environment",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = []
@@ -36,8 +38,8 @@ dev = ["pytest>=8", "ruff>=0.6"]
 jarvis = "jarvis.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/begad-tamim/jarvis-trading-agent"
-Issues = "https://github.com/begad-tamim/jarvis-trading-agent/issues"
+Homepage = "https://github.com/begad-tamim/jarvis"
+Issues = "https://github.com/begad-tamim/jarvis/issues"
 
 [tool.setuptools.packages.find]
 include = ["jarvis*"]

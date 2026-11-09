@@ -26,6 +26,15 @@ DEFAULT_UNIVERSE = [
 
 @dataclass
 class Config:
+    # ---- assistant
+    brain: str = "auto"  # auto | claude-code | codex | gemini | ollama | claude | cmd | offline
+    brain_model: str | None = None
+    brain_command: str = ""  # for brain = "cmd", e.g. "aider --message {prompt}"
+    allow_edits: bool = False  # let agent brains change files (default: read-only)
+    project_roots: list[str] = field(default_factory=lambda: ["~/projects", "~/code", "~/dev", "~/src"])
+    projects: list[str] = field(default_factory=list)  # extra project folders outside the roots
+    markets: str = "auto"  # auto (on when Alpaca keys exist) | on | off
+    # ---- markets module
     mode: str = "paper"  # demo | paper | live
     universe: list[str] = field(default_factory=lambda: list(DEFAULT_UNIVERSE))
     benchmark: str = "SPY"
@@ -106,6 +115,10 @@ def load_config(path: str | Path | None = None) -> Config:
         cfg.analyst = env["JARVIS_ANALYST"]
     if env.get("JARVIS_DASHBOARD_HOST"):
         cfg.dashboard_host = env["JARVIS_DASHBOARD_HOST"]
+    if env.get("JARVIS_BRAIN"):
+        cfg.brain = env["JARVIS_BRAIN"]
+    if env.get("JARVIS_PROJECT_ROOTS"):
+        cfg.project_roots = [s.strip() for s in env["JARVIS_PROJECT_ROOTS"].split(",") if s.strip()]
     if env.get("JARVIS_UNIVERSE"):
         cfg.universe = [s.strip().upper() for s in env["JARVIS_UNIVERSE"].split(",") if s.strip()]
     validate(cfg)
@@ -127,6 +140,11 @@ def validate(cfg: Config) -> None:
         (cfg.scan_interval_sec >= 1, "scan_interval_sec must be >= 1"),
         (cfg.analyst in ("rules", "claude", "claude-code", "ollama"), "analyst must be rules, claude, claude-code or ollama"),
         (len(cfg.universe) > 0, "universe is empty"),
+        (
+            cfg.brain in ("auto", "claude-code", "codex", "gemini", "ollama", "claude", "cmd", "offline"),
+            "brain must be auto, claude-code, codex, gemini, ollama, claude, cmd or offline",
+        ),
+        (cfg.markets in ("auto", "on", "off"), "markets must be auto, on or off"),
     ]
     for ok, msg in checks:
         if not ok:

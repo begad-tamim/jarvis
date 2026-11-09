@@ -75,6 +75,7 @@ class Engine:
         self.scans = 0
         self.start_equity: float | None = self.journal.get("start_equity")
         self._subs: list[queue.Queue] = []
+        self.bus: Any = None  # optional jarvis.bus.Bus shared with the rest of the hub
         self._error_streak = 0
         self._veto_seen: dict[tuple[str, str], float] = {}
         for e in reversed(self.journal.events("trade", 200)):
@@ -93,6 +94,8 @@ class Engine:
                 self._subs.remove(q)
 
     def _publish(self, kind: str, payload: Any) -> None:
+        if self.bus is not None:
+            self.bus.publish(kind, payload)
         for q in list(self._subs):
             try:
                 q.put_nowait((kind, payload))

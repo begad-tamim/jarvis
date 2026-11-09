@@ -3,7 +3,7 @@
 Providers
 ---------
 - ``rules``      - deterministic, free, offline (default; always the fallback)
-- ``claude``     - Anthropic API via the official SDK (`pip install "jarvis-trading-agent[ai]"`)
+- ``claude``     - Anthropic API via the official SDK (`pip install ".[ai]"`)
 - ``claude-code``- your Claude subscription through the `claude` CLI in headless mode
 - ``ollama``     - any local model served by Ollama (fully private, free)
 
@@ -174,7 +174,7 @@ class ClaudeAnalyst:
         try:
             import anthropic
         except ImportError as e:  # pragma: no cover - optional dependency
-            raise RuntimeError('Claude analyst needs the SDK: pip install "jarvis-trading-agent[ai]"') from e
+            raise RuntimeError('Claude analyst needs the SDK: pip install ".[ai]"') from e
         self._anthropic = anthropic
         self.client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY / `ant auth login`
         self.model = model

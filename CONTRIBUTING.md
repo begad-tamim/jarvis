@@ -3,7 +3,7 @@
 Thanks for helping make JARVIS better!
 
 ```bash
-git clone https://github.com/begad-tamim/jarvis-trading-agent && cd jarvis-trading-agent
+git clone https://github.com/begad-tamim/jarvis && cd jarvis
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,ai]"
 pytest -q && ruff check jarvis tests
@@ -18,6 +18,9 @@ jarvis demo
 4. **Same engine everywhere.** Live, demo and backtest all run through `Engine`, so there's no separate backtest logic to drift.
 
 ## Good first issues
+
+- A new brain in `jarvis/brains.py` (any agent CLI or local model). Add a fake-CLI test like the ones in `tests/test_brains.py`.
+- A new channel in `jarvis/channels/` (WhatsApp, Discord, Slack).
 
 - A new broker adapter (Interactive Brokers, Tradier, Binance testnet…). Implement the `Broker` protocol in `jarvis/brokers/__init__.py`.
 - New quant factors in `strategy.py`, with a test.

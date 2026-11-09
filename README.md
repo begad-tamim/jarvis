@@ -2,25 +2,25 @@
 
 <img src="docs/assets/logo.svg" width="88" alt="JARVIS arc reactor logo">
 
-# JARVIS · Autonomous AI Stock Trading Agent
+# JARVIS · Your open-source AI command center
 
-**An open-source AI trading bot that scans the market, reasons like a portfolio manager, and trades on Alpaca 24/7, inside hard risk limits it cannot break.**
+**One assistant for every project you own. It reads your code with *any* AI model, talks with you by voice, picks up when you call it, and runs a trading desk while you work.**
 
-Claude, Claude Code or a local Ollama model writes the thesis. Plain Python code sizes the trade, sets the stop and can veto anything.
+Claude Code · Codex · Gemini CLI · Ollama · any CLI agent. Swap the brain with one line. Your code never leaves your machine.
 
-[![CI](https://github.com/begad-tamim/jarvis-trading-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/begad-tamim/jarvis-trading-agent/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/begad-tamim/jarvis-trading-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/begad-tamim/jarvis-trading-agent/actions/workflows/codeql.yml)
+[![CI](https://github.com/begad-tamim/jarvis/actions/workflows/ci.yml/badge.svg)](https://github.com/begad-tamim/jarvis/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/begad-tamim/jarvis/actions/workflows/codeql.yml/badge.svg)](https://github.com/begad-tamim/jarvis/actions/workflows/codeql.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-zero-3ddc97)
-![Broker](https://img.shields.io/badge/broker-Alpaca-ffd700)
-![AI](https://img.shields.io/badge/AI-Claude%20%7C%20Ollama-5fd8f5)
+![Brains](https://img.shields.io/badge/brains-Claude%20Code%20%7C%20Codex%20%7C%20Gemini%20%7C%20Ollama-5fd8f5)
+![Tests](https://img.shields.io/badge/tests-67%20passing-3ddc97)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[**Quick start**](#-quick-start-30-seconds-no-keys) · [How it works](#-how-it-works) · [Safety](#-safety-the-ai-proposes-the-code-decides) · [Backtest](#-backtesting) · [Config](#-configuration) · [FAQ](#-faq)
+[**Try it in 30 seconds**](#-try-it-in-30-seconds) · [What it does](#-what-jarvis-does) · [Any brain](#-any-brain-swap-it-in-one-line) · [On your phone](#-on-your-phone-voice-and-calls) · [Markets](#-markets-autonomous-trading-inside-hard-limits) · [Security](#-security) · [FAQ](#-faq)
 
-<img src="docs/assets/demo.gif" alt="JARVIS AI trading agent live dashboard: equity curve, signal radar, live reasoning, positions with stop-loss and take-profit, risk guardrails, executions" width="100%">
+<img src="docs/assets/demo.gif" alt="JARVIS AI command center: daily briefing across projects, asking questions about a codebase, switching projects by voice, and the autonomous trading dashboard" width="100%">
 
-<sub>The live HUD in <code>jarvis demo</code> mode (simulated market). Every scan, thesis, veto and order streams in real time.</sub>
+<sub><code>jarvis demo</code>: a sample workspace of 7 real git repos plus a simulated market. No keys, no account, nothing leaves your machine.</sub>
 
 </div>
 
@@ -28,252 +28,243 @@ Claude, Claude Code or a local Ollama model writes the thesis. Plain Python code
 
 ## 🧠 The problem
 
-The market moves while you're in a meeting, asleep, or living your life. And when you *do* trade, emotion makes the calls: FOMO entries, no stop-loss, panic exits.
+You have nine projects, four terminals, three AI tools and one brain.
 
-Most "AI trading bots" make this worse. They hand a language model the keys and hope it doesn't hallucinate a position size.
+Every morning you re-explain your own work to a chatbot. You forget which repo has uncommitted changes, which one is behind, and what you promised to finish. Your AI lives in one tool on one laptop, so the moment you step away it can't help you. And the market moves while you're in a meeting.
 
 ## ⚡ The fix
 
-**JARVIS** is a small, fast, fully local agent that splits the job the way a real trading desk does:
+**JARVIS** sits on top of the tools you already use and turns them into one assistant that knows your whole working life:
 
-| Role | Who | What it does |
+| | What you get |
+|---|---|
+| 🗂️ **Command center** | Every project on one screen, with live git status (dirty, ahead, behind, stale), TODO counts and a **daily briefing** computed from git. It costs zero tokens. |
+| 💬 **Ask anything** | *"What's left before I can ship orbit-api?"* JARVIS runs your AI agent **inside that project's folder**, so answers come from the real code, not guesses. |
+| 🔀 **Jump between projects** | *"Open atlas."* The context, notes, tasks and conversation follow you. |
+| 🧠 **Any brain** | Claude Code, Codex, Gemini CLI, Ollama, the Claude API, or any command you like. Change one line and keep everything else. |
+| 🎙️ **Voice** | Tap the mic and talk. JARVIS answers out loud. |
+| 📱 **On your phone, anywhere** | Installs as an app on iPhone and Android. Laptop and phone share one live conversation. |
+| ☎️ **It calls you, you call it** | *"Call me when the build is green."* Or dial JARVIS from any phone and talk to your workspace. (Twilio, optional) |
+| 📝 **Memory** | *"Remember the pilot starts Monday."* Notes and tasks per project, always in context. |
+| 📈 **Markets** | An autonomous trading desk on Alpaca: a quant engine and an AI analyst, with hard risk limits the AI can't override. |
+
+> **The AI proposes. The code decides.** Brains run **read-only** by default. In trading, the model never picks a share count or skips a stop-loss.
+
+## 👀 See it
+
+| Home: your day in one screen | Ask: a real answer from the code | Markets: trading inside hard limits |
 |---|---|---|
-| 📡 **Quant** | Python | Scores 20+ liquid stocks on 7 explainable factors, every few minutes |
-| 🧠 **Analyst** | Claude / Claude Code / Ollama / rules | Reads the signals and the news, says *buy* or *pass* with a calibrated conviction and a plain-English thesis |
-| 🛡️ **Risk manager** | Python | Sizes every trade from volatility, attaches a stop, enforces 10+ hard limits. **Can veto anything.** |
-| ⚙️ **Execution** | Alpaca API | Bracket orders, so the stop-loss lives *at the broker*, even if your laptop dies |
-| 👁️ **Oversight** | You | A live HUD dashboard, phone alerts, and a press-and-hold kill switch |
+| <img src="docs/assets/hud-home.png" alt="JARVIS home: daily briefing, projects that need attention, markets card and the Ask JARVIS console"> | <img src="docs/assets/hud-project.png" alt="JARVIS project workspace for orbit-api with Claude Code answering what is left before shipping"> | <img src="docs/assets/hud-markets.png" alt="JARVIS markets view with equity curve, signal radar, live reasoning, positions and kill switch"> |
 
-> **The AI proposes. The code decides.** The model never chooses a share count, a price, or whether a stop exists.
+<p align="center"><img src="docs/assets/phone.png" width="720" alt="JARVIS on a phone: home briefing, voice conversation, project workspace"></p>
 
-## 🚀 Quick start (30 seconds, no keys)
+## 🚀 Try it in 30 seconds
 
 ```bash
-git clone https://github.com/begad-tamim/jarvis-trading-agent
-cd jarvis-trading-agent
-pip install .            # zero dependencies: stdlib only
-jarvis demo              # simulated market + live dashboard opens in your browser
+git clone https://github.com/begad-tamim/jarvis
+cd jarvis
+pip install .            # zero dependencies: Python standard library only
+jarvis demo              # sample workspace + simulated market + the HUD opens in your browser
 ```
 
-That's it: a simulated market, $100k of play money, and JARVIS trading it live in front of you.
-
-### Paper trading on Alpaca (free, real market data)
-
-1. Create a free account at [alpaca.markets](https://app.alpaca.markets/signup) and generate **paper** API keys.
-2. Configure and run:
+Then let a real model answer about the sample code:
 
 ```bash
-cp .env.example .env && chmod 600 .env     # paste your Alpaca paper keys
-cp examples/jarvis.toml jarvis.toml        # optional: universe, risk, analyst
-jarvis doctor                              # checks keys, config and security settings
-jarvis run                                 # trades autonomously during market hours
+jarvis demo --brain auto     # uses Claude Code / Codex / Gemini, whichever you have installed
 ```
 
-### Add the AI analyst
+### Use it on your own projects
 
 ```bash
-pip install ".[ai]"                         # official Anthropic SDK (optional)
+jarvis                       # finds the git repos in ~/projects, ~/code, ~/dev, ~/src
+jarvis brief                 # the daily briefing, right in the terminal
+jarvis ask "what changed in the API this week?" -p orbit-api
 ```
 
 ```toml
-# jarvis.toml
+# jarvis.toml (optional)
 [jarvis]
-analyst = "claude"          # Anthropic API (ANTHROPIC_API_KEY)
-# analyst = "claude-code"   # your Claude subscription via the `claude` CLI, no API key
-# analyst = "ollama"        # 100% local and private, e.g. analyst_model = "qwen2.5:7b"
+project_roots = ["~/work", "~/projects"]
+brain = "auto"               # auto | claude-code | codex | gemini | ollama | claude | cmd | offline
+allow_edits = false          # true lets the agent change files; default is read-only
 ```
 
-### Docker
+## 🧠 Any brain: swap it in one line
+
+JARVIS is the body. The model is swappable. Agent CLIs run **inside the active project**, so they read the actual files before answering.
+
+| `brain =` | Runs | Read-only by default via | Needs |
+|---|---|---|---|
+| `claude-code` | `claude -p` | `--permission-mode plan`, edit and shell tools blocked | [Claude Code](https://claude.com/claude-code) |
+| `codex` | `codex exec` | Codex's read-only sandbox | [Codex CLI](https://github.com/openai/codex) |
+| `gemini` | `gemini -p` | headless mode (no tool approval) | [Gemini CLI](https://github.com/google-gemini/gemini-cli) |
+| `ollama` | local `/api/chat` | no tools at all | [Ollama](https://ollama.com) |
+| `claude` | Anthropic API | no tools at all | `pip install ".[ai]"` + `ANTHROPIC_API_KEY` |
+| `cmd` | **anything**, e.g. `brain_command = "aider --message {prompt}"` | your choice | that tool |
+| `offline` | no model | answers from git, TODOs and your tasks | nothing |
+
+`auto` picks the first one installed. `jarvis brains` shows what's on your machine. Claude Code conversations resume per project, so follow-up questions keep their context.
+
+## 📱 On your phone, voice and calls
+
+**The HUD is a phone app.** Put JARVIS on your private network with [Tailscale](https://tailscale.com) (free), then open it on your phone and **Add to Home Screen**:
 
 ```bash
-docker compose up                          # demo, HUD on http://127.0.0.1:8777
-JARVIS_CMD=run docker compose up           # paper trading (reads .env)
+tailscale serve --bg 8777
+echo 'JARVIS_ALLOWED_HOSTS=your-mac.your-tailnet.ts.net' >> .env
+# open https://your-mac.your-tailnet.ts.net/#token=... on your phone (the link jarvis prints)
 ```
 
-## 🔁 How it works
+You get HTTPS, so the 🎙️ mic works on iOS and Android. Your laptop and phone show the same live conversation.
 
-```mermaid
-flowchart LR
-    A[📡 Alpaca market data<br/>candles + news] --> B[Quant engine<br/>7-factor score]
-    B -->|top candidates| C{🧠 Analyst<br/>Claude · Ollama · rules}
-    C -->|buy/pass + conviction<br/>+ thesis| D{🛡️ Risk engine<br/>hard guardrails}
-    D -->|veto| L[(Journal + HUD)]
-    D -->|approved: size, stop, target| E[⚙️ Alpaca bracket order]
-    E --> F[Position manager<br/>trailing stop · target · signal exit]
-    F --> L
-    G[🛑 Kill switch] --> E
+**Telegram** (free, no public URL): create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`. Only your chat id gets answers.
+`/brief`, `/projects`, `/open orbit`, `/markets`, `/note …`, or just talk.
+
+**Phone calls, both ways** (optional, [Twilio](https://www.twilio.com)):
+
+```bash
+# .env
+TWILIO_ACCOUNT_SID=AC...   TWILIO_AUTH_TOKEN=...   TWILIO_FROM=+1555...   JARVIS_OWNER_PHONE=+1555...
+JARVIS_PUBLIC_URL=https://your-mac.your-tailnet.ts.net    # e.g. `tailscale funnel 8777`
 ```
 
-Every tick: sync the account, enforce halts, manage exits. Every scan: score the universe, ask the analyst, run the risk verdict, execute.
-**Exits are managed even when JARVIS is paused or halted.** Protecting open positions never stops.
+- **JARVIS calls you:** `jarvis call "deploy finished"`, say *"call me"*, or get a call automatically when the trading kill switch fires.
+- **You call JARVIS:** point your Twilio number's voice webhook at `$JARVIS_PUBLIC_URL/voice/incoming` and talk. Your speech goes to the same assistant, and the answer is read back to you.
+- Every webhook must carry a valid **Twilio signature**, and **only your number** is answered.
 
-### The quant score
+## 📈 Markets: autonomous trading inside hard limits
 
-Seven factors, each normalised to `[-1, 1]`, weighted into a score from `-100` to `+100`. Each factor is reported to the analyst and shown on the dashboard, so every trade is explainable:
+The markets module trades US stocks on [Alpaca](https://alpaca.markets) (paper by default) and splits the job like a real desk:
 
-| Factor | Weight | Signal |
-|---|---:|---|
-| Trend | 25 | Fast EMA vs slow EMA |
-| Momentum | 20 | Rate of change |
-| MACD | 15 | Histogram, ATR-normalised |
-| Structure | 10 | Price vs slow SMA |
-| RSI | 10 | Rewards 50-70, penalises overbought and falling knives |
-| Volume | 10 | Volume surge in the direction of the move |
-| Relative strength | 10 | Outperformance vs the benchmark (SPY) |
+| Role | Who | What it does |
+|---|---|---|
+| 📡 Quant | Python | Scores 20 liquid stocks on 7 explainable factors every few minutes |
+| 🧠 Analyst | Claude / Claude Code / Ollama / rules | Reads signals and news, says *buy* or *pass* with a conviction and a thesis |
+| 🛡️ Risk manager | Python | Sizes from volatility, attaches a stop, enforces 10+ hard limits. **Can veto anything.** |
+| ⚙️ Execution | Alpaca | Bracket orders, so the stop lives **at the broker**, even if your laptop dies |
+| 👁️ Oversight | You | The HUD, phone alerts, a call when it halts, and a hold-to-kill switch |
 
-Plus a **market-regime filter**: when SPY trades below its 50-period EMA, the bar for new buys goes up.
+```bash
+cp .env.example .env && chmod 600 .env     # free Alpaca paper keys
+jarvis doctor                              # checks keys, config and security
+jarvis                                     # command center + markets (on when keys exist)
+jarvis trade                               # markets only
+```
 
-## 🛡️ Safety: the AI proposes, the code decides
+<details>
+<summary><b>Guardrails</b> (the AI can't override any of these)</summary>
 
 | Guardrail | Default | Why |
 |---|---|---|
-| Risk per trade | 1% of equity | Position size = risk ÷ (2 × ATR). Volatile stocks get smaller positions. |
-| Stop-loss | Mandatory, 2×ATR | Sent as a **bracket order**, so it lives at the broker |
-| Take-profit | 4×ATR (2:1) | Locks in winners |
-| Trailing stop | 2.5×ATR | Ratchets up only, never down |
-| Max position | 10% of equity | No single-stock blowups |
-| Max positions | 8 | Diversification |
-| Margin | **Never** | Buying power capped at cash; exposure ≤ 95% |
-| Daily loss halt | -3% | Stops opening trades for the day |
+| Risk per trade | 1% of equity | Size = risk ÷ (2 × ATR). Volatile stocks get smaller positions. |
+| Stop-loss | Mandatory, 2×ATR | Sent as a bracket order, so it lives at the broker |
+| Take-profit / trailing | 4×ATR / 2.5×ATR | The trail ratchets up only |
+| Max position / positions | 10% / 8 | No single-stock blowups |
+| Margin | **Never** | Exposure capped at 95% of equity |
+| Daily loss halt | -3% | Stops new entries for the day |
 | Drawdown kill switch | -15% from peak | Cancels everything and flattens |
-| Entry limit | 20 / day | No over-trading |
-| Cooldown | 60 min | No revenge re-entries |
-| PDT guard | on | Blocks entries that could trip the US pattern-day-trader rule (<$25k) |
-| Liquidity | ≥ $5 price, ≥ $1M daily volume | No penny stocks |
-| Conviction | ≥ 0.55 | The analyst must actually believe it, and conviction can only *shrink* a position |
+| Entries / cooldown | 20 per day / 60 min | No over-trading or revenge trades |
+| PDT guard, liquidity, min conviction | on / $5 & $1M / 0.55 | Conviction can only *shrink* a position |
 | **Live money** | **Locked** | Needs `mode = "live"` **and** `JARVIS_LIVE_TRADING=I_UNDERSTAND_THE_RISKS` |
 
-LLM output is treated as untrusted. It's parsed against a strict JSON schema, unknown tickers are dropped, and news headlines are fenced as data so prompt injection can't place orders. See [SECURITY.md](SECURITY.md) for the full threat model.
+</details>
 
-## 🖥️ The dashboard
+<details>
+<summary><b>Honest backtest</b></summary>
 
-<img src="docs/assets/dashboard.png" alt="JARVIS trading dashboard with equity curve, signal radar, live AI reasoning, open positions with stop and target ladder, latest decision with risk verdict, and trade executions" width="100%">
-
-- **Portfolio**: live equity curve, P&L, win rate, realized gains
-- **Signal radar**: the universe ranked by quant score, with buy setups lit
-- **Live reasoning**: JARVIS's inner monologue: scans, theses, vetoes and fills
-- **Positions**: each one on a stop → price → target ladder
-- **Latest decision**: the analyst's thesis, conviction ring, and the risk engine's verdict
-- **Kill switch**: press and hold for one second to cancel everything and flatten
-
-Built with zero frameworks and zero third-party requests: one HTML file, one CSS file, one JS file. It binds to `127.0.0.1`, uses a 256-bit access key and a strict Content-Security-Policy, and is mobile responsive.
-
-## 📈 Backtesting
-
-The backtester replays history through **the exact same `Engine`, strategy and risk code that trades live**, so there is no separate backtest logic to drift from reality.
+The backtester replays history through **the exact same engine that trades live**:
 
 ```bash
 jarvis backtest NVDA AAPL MSFT AMZN META GOOGL AVGO JPM LLY COST --range 2y
-jarvis backtest --demo                     # offline, synthetic data
 ```
 
-Honest example (daily bars, 10 mega-caps, 2 years to Nov 2026, rules analyst, default risk):
-
-| | JARVIS | SPY buy & hold |
+| Daily bars, 10 mega-caps, 2 years to Nov 2026 | JARVIS | SPY buy & hold |
 |---|---:|---:|
 | Total return | **+8.9%** | +20.6% |
 | Max drawdown | **-5.9%** | -19.0% |
-| Trades | 100 | 1 |
-| Win rate / profit factor | 39% / 1.37 | n/a |
+| Trades / win rate / profit factor | 100 / 39% / 1.37 | 1 / n/a / n/a |
 
-In a strong bull market, a risk-first trend system lags buy-and-hold on return, but it took about a third of the drawdown. That's the trade-off of never risking more than 1% per trade. JARVIS is built to survive, not to promise 10x. Tune it, test it, and judge it on paper first.
+It lagged a strong bull market on return and took about a third of the drawdown. That's the price of risking 1% per trade. It's built to survive, not to promise 10x. The LLM analyst is left out of backtests to avoid look-ahead bias.
 
-> The LLM analyst is deliberately **not** used in backtests: models have read the news after your start date (look-ahead bias).
+</details>
 
-## ⚙️ Configuration
+## 🔒 Security
 
-All strategy and risk settings live in [`examples/jarvis.toml`](examples/jarvis.toml). Secrets live only in `.env` (see [`.env.example`](.env.example)).
+JARVIS can see your code and your brokerage account, so it was built like it matters:
 
-<details>
-<summary><b>CLI reference</b></summary>
+- **Local-first.** The HUD binds to `127.0.0.1`. Your code is only read by the brain *you* chose.
+- **Read-only brains** by default (`allow_edits = false`). Git is read with plumbing commands only.
+- **256-bit access key**, sent in a header (not a cookie, so no CSRF), a Host allow-list against DNS rebinding, a strict CSP, no third-party requests, and capped request bodies.
+- **Signed phone webhooks** (Twilio HMAC) plus an owner-number check. **Allow-listed Telegram chats.**
+- Workspace context is fenced as data, so a README or a headline can't instruct the model or place orders.
+- Secrets only in `.env`, and `jarvis doctor` warns if it's readable by others. CI runs CodeQL and a 3-OS test matrix.
+
+Details in [SECURITY.md](SECURITY.md).
+
+## ⌨️ CLI
 
 | Command | What it does |
 |---|---|
-| `jarvis demo` | Simulated market + live HUD. No keys, no network. |
-| `jarvis run` | Autonomous trading on Alpaca (paper unless unlocked) |
-| `jarvis scan [--demo]` | Rank the universe right now, with reasons |
-| `jarvis backtest [SYMBOLS] [--range 2y] [--demo] [--json out.json]` | Replay history through the live engine |
-| `jarvis status` | Account, positions, open orders |
-| `jarvis doctor [--offline]` | Config, keys and security checks |
-| `jarvis kill [--yes]` | Cancel all orders and close all positions |
+| `jarvis` | Start JARVIS: HUD + assistant (+ markets, Telegram, phone when configured) |
+| `jarvis demo [--brain auto]` | Sample workspace + simulated market. No keys. |
+| `jarvis ask "…" [-p project] [--brain codex]` | Ask from the terminal |
+| `jarvis brief` · `jarvis projects` · `jarvis brains` | Briefing, project status, installed brains |
+| `jarvis call "…"` | JARVIS phones you |
+| `jarvis trade` · `scan` · `backtest` · `status` · `kill` | The markets module |
+| `jarvis doctor` | Config, keys and security checks |
 
-</details>
+In the HUD, press <kbd>/</kbd> to ask. Try *"brief me"*, *"open ledger"*, *"status of atlas"*, *"remember …"*, *"add task …"*, *"markets"*, *"pause trading"* or *"call me"*. Anything else goes to the brain.
 
-<details>
-<summary><b>Analyst providers</b></summary>
-
-| Provider | Cost | Privacy | Setup |
-|---|---|---|---|
-| `rules` | free | 100% local | none (default) |
-| `claude` | API usage (~1 call / 15 min) | Anthropic API | `pip install ".[ai]"`, `ANTHROPIC_API_KEY` |
-| `claude-code` | your Claude plan | Anthropic | [Claude Code](https://claude.com/claude-code) installed |
-| `ollama` | free | 100% local | [Ollama](https://ollama.com) + `ollama pull qwen2.5:7b` |
-
-The default Claude model is `claude-opus-5-5`. Set `analyst_model = "claude-haiku-5-5"` for a much cheaper analyst.
-
-</details>
-
-<details>
-<summary><b>Phone alerts</b></summary>
-
-Set any of `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL` or `SLACK_WEBHOOK_URL` in `.env`. Every buy, sell and kill switch is pushed to your phone.
-
-</details>
-
-## 🗂️ Project structure
+## 🗂️ How it's built
 
 ```
 jarvis/
-├── engine.py        # the autonomous loop (scan → think → verify → execute → protect)
-├── strategy.py      # 7-factor explainable quant score + regime filter
-├── analyst.py       # Claude / Claude Code / Ollama / rules analysts, strict schema
-├── risk.py          # the guardrails: sizing, stops, halts, kill switch
-├── indicators.py    # EMA, RSI, MACD, ATR, Bollinger… in pure Python
-├── backtest.py      # replays history through the live engine
-├── brokers/         # alpaca.py (paper/live), paper.py (local simulator)
-├── data/            # alpaca_data.py, yahoo.py, synthetic.py
-├── server.py        # locked-down dashboard server (token auth, CSP, SSE)
-├── journal.py       # SQLite trade journal + audit log
-└── web/             # the HUD: index.html, style.css, app.js
+├── assistant.py     # one conversation for every channel: HUD, phone, Telegram, calls
+├── brains.py        # Claude Code · Codex · Gemini · Ollama · Claude API · any command · offline
+├── projects.py      # discovery, live git status, the free daily briefing
+├── channels/        # telegram.py (long polling), voice.py (Twilio calls, signed webhooks)
+├── server.py        # the locked-down hub: token auth, CSP, SSE live sync
+├── engine.py        # markets: scan → think → verify → execute → protect
+├── strategy.py · risk.py · analyst.py · backtest.py · brokers/ · data/
+└── web/             # the HUD: vanilla HTML/CSS/JS, installable as a phone app
 ```
+
+Zero runtime dependencies. About 6,000 lines of Python and vanilla JS. 67 tests.
 
 ## ❓ FAQ
 
-**Is this profitable?**
-Nobody can promise that, and you should distrust any bot that does. JARVIS gives you a disciplined, explainable, risk-capped process and the tools to test it. Run it on paper for weeks before considering real money.
+**Is it another chat UI?**
+No. Chat UIs don't know your projects. JARVIS reads your repos' real state, runs your agent in the right folder, remembers per-project notes and tasks, and follows you to your phone.
 
-**Does it trade by itself all day?**
-Yes. `jarvis run` scans, decides and trades on its own every market day, manages stops and targets on every tick, and sleeps while the market is closed.
+**Do I need an API key?**
+No. If you have Claude Code, Codex or Gemini CLI, JARVIS uses that. Ollama is free and local. With nothing installed, it still runs the free briefing and project tracking.
 
-**Which broker and markets?**
-US stocks and ETFs on [Alpaca](https://alpaca.markets) (paper and live). The `Broker` interface is about 7 methods, so PRs for other brokers are welcome.
+**Can it change my code?**
+Only if you set `allow_edits = true`. Otherwise every brain runs read-only.
 
-**Do I need an AI API key?**
-No. The `rules` analyst is free and offline. `claude-code` uses an existing Claude subscription, and `ollama` runs a local model.
-
-**Is it safe to run on my laptop?**
-The dashboard is local-only and token-protected, keys stay in `.env`, and stops live at the broker. Read [SECURITY.md](SECURITY.md).
+**Does the trading make money?**
+Nobody can promise that. JARVIS gives you a disciplined, explainable, risk-capped process and an honest backtester. Paper-trade first. Not financial advice.
 
 **Why "JARVIS"?**
-It started as a personal AI assistant. The trading desk was the part people kept asking about, so it became its own open-source project.
+Because everyone who writes code has wanted one. Now it's open source.
 
 ## 🗺️ Roadmap
 
-- [ ] More brokers (Interactive Brokers, Tradier)
-- [ ] Multi-timeframe confirmation (daily trend + intraday entry)
-- [ ] Portfolio-level correlation limits
-- [ ] Walk-forward optimisation in the backtester
-- [ ] Weekly AI performance review report
+- [ ] Wake word ("Hey JARVIS") in the phone app
+- [ ] Calendar + email briefing (read-only)
+- [ ] CI status per project (GitHub Actions)
+- [ ] Hand off a task to an agent with `allow_edits` and review the diff in the HUD
+- [ ] More brokers (IBKR, Tradier)
 
 ## 🤝 Contributing
 
-PRs are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md). The two rules: **zero required dependencies**, and **the LLM never gets the final say on risk.**
+PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Two rules: **zero required dependencies**, and **the AI never gets the final say on risk.**
 
-If JARVIS is useful or interesting to you, **a ⭐ helps others find it.**
+**If JARVIS made you smile, a ⭐ helps other developers find it.**
 
 ## ⚠️ Disclaimer
 
-This software is for education and research. It is **not financial advice**. Trading stocks involves substantial risk of loss. Past or simulated performance does not guarantee future results. You are solely responsible for any trades placed by software you run. Use paper trading first.
+For education and research. The markets module is **not financial advice**. Trading involves substantial risk of loss, and simulated results don't guarantee future results. You're responsible for any trades placed by software you run.
 
 ---
 
@@ -281,6 +272,6 @@ This software is for education and research. It is **not financial advice**. Tra
 
 Built by **Begad Tamim**, AI engineer · [GitHub](https://github.com/begad-tamim) · [LinkedIn](https://www.linkedin.com/in/begad-tamim) · MIT License
 
-<sub>AI trading bot · autonomous trading agent · LLM trading agent · Claude trading bot · Alpaca trading bot in Python · algorithmic trading · paper trading · stock market AI · Ollama · JARVIS AI</sub>
+<sub>JARVIS AI assistant · open-source personal AI assistant · AI command center for developers · Claude Code UI · Codex CLI · Gemini CLI · Ollama · voice AI assistant · AI phone assistant · project manager for developers · daily standup briefing · AI trading bot · Alpaca trading bot · autonomous agent · lightweight · fast · zero dependencies</sub>
 
 </div>

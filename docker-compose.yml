@@ -1,5 +1,5 @@
 # docker compose up            -> demo with the HUD on http://127.0.0.1:8777
-# JARVIS_CMD=run docker compose up   -> paper trading on Alpaca (needs .env)
+# JARVIS_CMD=up docker compose up    -> your projects (mount them below) + markets if .env has Alpaca keys
 services:
   jarvis:
     build: .
@@ -12,6 +12,7 @@ services:
     volumes:
       - jarvis-data:/home/jarvis/.jarvis
       # - ./jarvis.toml:/app/jarvis.toml:ro   # uncomment after creating jarvis.toml
+      # - ~/projects:/home/jarvis/projects:ro  # let JARVIS read your projects (read-only)
     ports:
       - "127.0.0.1:8777:8777"   # published on localhost only
     read_only: true
