@@ -16,7 +16,6 @@ from __future__ import annotations
 import hmac
 import json
 import logging
-import mimetypes
 import queue
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -26,6 +25,14 @@ from typing import Any
 log = logging.getLogger("jarvis.server")
 WEB = Path(__file__).parent / "web"
 MAX_BODY = 4096
+# Static files are an explicit allow-list: no path from the request ever touches the filesystem.
+STATIC = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/style.css": ("style.css", "text/css; charset=utf-8"),
+    "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+}
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
@@ -104,13 +111,11 @@ def make_handler(engine: Any, token: str, allowed_hosts: set[str]):
                 return self._stream()
             if path == "/api/health":
                 return self._json(200, {"ok": True, "status": engine.status})
-            name = "index.html" if path in ("/", "/index.html") else path.lstrip("/")
-            f = (WEB / name).resolve()
-            if not f.is_file() or WEB.resolve() not in f.parents:
+            asset = STATIC.get(path)
+            if asset is None:
                 return self._json(404, {"error": "not found"})
-            ctype = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
-            data = f.read_bytes()
-            self._headers(200, ctype, {"Content-Length": str(len(data))})
+            data = (WEB / asset[0]).read_bytes()
+            self._headers(200, asset[1], {"Content-Length": str(len(data))})
             self.wfile.write(data)
 
         def _stream(self) -> None:
